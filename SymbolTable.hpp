@@ -26,6 +26,6 @@ class GlobalSymbolTable {
     void insertFunction (Function* func);
     void endGlobalScope();
 
-}
+};
 
 #endif
