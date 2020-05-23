@@ -48,7 +48,7 @@ continue                    	{return CONTINUE;}
 \/                         	 	{return DIV;}
 [a-zA-Z][a-zA-Z0-9]*        	{return ID;}
 0|[1-9][0-9]*               	{
-                                    yylval=make_shared<Num>(yytext);
+                                    yylval = new Num(yytext);
                                     return NUM;
                                 }
 \"([^\n\r\"\\]|\\[rnt"\\])+\" 	{return STRING;}

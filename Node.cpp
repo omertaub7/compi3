@@ -31,7 +31,7 @@ TypeN Node::getType() const {
     return type;
 }
 
-void Node::addChild(shared_ptr<Node> child) {
+void Node::addChild(Node* child) {
     children.push_back(child);
 }
 
@@ -41,7 +41,7 @@ vector<string> Node::_getInfo() const{
     info.push_back(name);
     info.push_back(to_string(type));
     
-    for(shared_ptr<Node> child : children) {
+    for(Node* child : children) {
         vector<string> child_info = child->_getInfo();
         info.insert(info.end(), child_info.begin(), child_info.end());
     }

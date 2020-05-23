@@ -6,11 +6,8 @@
 #include "Node.hpp"
 /*
 #include "SymbolTable.hpp"
-*/
-/*
 #include "SyntaxExceptions.hpp"
 */
-// #include "source.hpp"
 
 using namespace std;
 
@@ -127,7 +124,7 @@ Exp:			LPAREN Exp RPAREN {}
 			|	Exp DIV Exp {}
 			|	ID {}
 			|	Call {}
-			|	NUM {cout << ((shared_ptr<Num>)($1))->value <<endl;} // Semantic check - make sure that
+			|	NUM {cout << ((Num*)$1)->value <<endl;} // Semantic check - make sure that
 			|	NUM B {}
 			|	STRING {}
 			|	TRUE {}

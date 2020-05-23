@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#define YYSTYPE shared_ptr<Node>
+#define YYSTYPE Node*
 
 using namespace std;
 
@@ -48,7 +48,7 @@ class Node {
 private:
     string name;
     TypeN type;
-    vector<shared_ptr<Node>> children; 
+    vector<Node*> children; 
 
 public:
     Node();
@@ -56,7 +56,7 @@ public:
     virtual ~Node() = default;
     virtual string getName() const;
     virtual TypeN getType() const;
-    virtual void addChild(shared_ptr<Node> child);
+    virtual void addChild(Node* child);
     // for testing only
     virtual vector<string> _getInfo() const;
     virtual string _getClassName() const;
