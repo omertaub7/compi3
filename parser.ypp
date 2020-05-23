@@ -67,7 +67,7 @@ Funcs:			/*epsilon*/ {output::printProductionRule(2);}
 			|	FuncDecl Funcs {output::printProductionRule(3);}
 ;
 FuncDecl:		RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE 
-				{output::printProductionRule(4);}
+				{output::printProductionRule(4); //TODO: Push function symbol to global function symbol table}
 ;
 RetType:		Type {output::printProductionRule(5);}
 ;
