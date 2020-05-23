@@ -12,28 +12,28 @@ class idException : public std::exception {
     string& getID() {
         return id;
     }
-}
+};
 
-class errorUndefException : idException {
+class errorUndefException : public idException {
     public:
     errorUndefException(string& s) {
         idException(s);
     }
-}
+};
 
-class errorDefException : idException {
+class errorDefException : public idException {
     public:
     errorDefException(string& s) {
         idException(s);
     }
-}
+};
 
-class errorUndefFuncException : idException {
+class errorUndefFuncException : public idException {
     public:
     errorUndefFuncException(string& s) {
         idException(s);
     }
-}
+};
 
 /*======================Value Based Exception - ByteTooLarge======================*/
 
@@ -45,7 +45,7 @@ class errorByteTooLargeException : public std::exception {
     string& getValue() {
         return v;
     }
-}
+};
 
 /*======================Vector Based Exception - PrototypeMismatchException======================*/
 class errorPrototypeMismatchException : public std::exception {
@@ -60,12 +60,12 @@ class errorPrototypeMismatchException : public std::exception {
     string& getID() {
         return id;
     }
-}
+};
 
 /*======================YYLENENO Based Exceptions======================*/
-class errorMismatchException :  public std::exception {}
-class errorUnexpectedBreakException : public std::exception {}
-class errorUnexpectedContinueException : public std::exception {}
-class errorMainMissingException : public  std::exception {}
+class errorMismatchException :  public std::exception {};
+class errorUnexpectedBreakException : public std::exception {};
+class errorUnexpectedContinueException : public std::exception {};
+class errorMainMissingException : public  std::exception {};
 
 #endif

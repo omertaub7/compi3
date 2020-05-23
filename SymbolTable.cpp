@@ -6,7 +6,7 @@ void SymbolTable::insertVarible(Node* var) {
     for (const Scope& s : scope_stack) { //all scopes loop
         for (cont std::pair<Node*, int> p : s) { //Current scope loop
             if (p.getName() == var.getName()) {
-                throw errorDef(p.getName());
+                throw errorDefException(p.getName());
             }
         }
     }
@@ -55,6 +55,7 @@ void SymbolTable::endGlobalScope() {
             break;
         }
     }
+    
     if (false == found_main) {
         throw errorMainMissingException();
     }

@@ -66,7 +66,7 @@ class Num : public Node {
 public:
     int value;
     Num(const char* x) : value(atoi(x)) {}
-}
+};
 
 // ========================= Exp ========================================
 /* can be created from the following rules:
