@@ -4,8 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hw3_output.hpp"
-#include "parser.tab.hpp"
 #include "Node.hpp"
+#include "parser.tab.hpp"
+
 
 %}
 

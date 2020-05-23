@@ -14,8 +14,6 @@
 
 using namespace std;
 
-#define YYSTYPE shared_ptr<Node>
-
 
 void yyerror(const char*);
 
@@ -129,7 +127,7 @@ Exp:			LPAREN Exp RPAREN {}
 			|	Exp DIV Exp {}
 			|	ID {}
 			|	Call {}
-			|	NUM {} // Semantic check - make sure that
+			|	NUM {cout << ((shared_ptr<Num>)($1))->value <<endl;} // Semantic check - make sure that
 			|	NUM B {}
 			|	STRING {}
 			|	TRUE {}
