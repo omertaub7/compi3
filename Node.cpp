@@ -11,7 +11,7 @@ string to_string(TypeN type) {
     {
         case TypeN::INT: return "int"; break;
         case TypeN::VOID: return "void"; break;
-        case TypeN::BYTE: return "BYTE"; break;
+        case TypeN::BYTE: return "byte"; break;
         case TypeN::STRING: return "string"; break;
     }
     // TypeN::BOOL
@@ -21,7 +21,9 @@ string to_string(TypeN type) {
 //=======================Node===================================
 Node::Node() : name(""), type(TypeN::VOID) {}
 
-Node::Node(string name, TypeN type) : name(name), type(type) {}
+Node::Node(string& s) : name(s), type(TypeN::VOID) { }
+
+Node::Node(string& name, TypeN type) : name(name), type(type) {}
 
 string Node::getName() const {
     return name;

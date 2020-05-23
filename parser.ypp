@@ -117,23 +117,39 @@ Type:			INT {}
 			|	BYTE {}
 			|	BOOL {}
 ;
-Exp:			LPAREN Exp RPAREN {}
-			|	Exp PLUS Exp {}
-			|	Exp MINUS Exp {}
-			|	Exp MUL Exp {}
-			|	Exp DIV Exp {}
-			|	ID {}
-			|	Call {}
-			|	NUM {cout << ((Num*)$1)->value <<endl;} // Semantic check - make sure that
-			|	NUM B {}
-			|	STRING {}
-			|	TRUE {}
-			|	FALSE {}
-			|	NOT Exp {}
-			|	Exp AND Exp {}
-			|	Exp OR Exp {}
-			|	Exp RELOP Exp {}
-			|	Exp EQUALOP Exp {}
+Exp:			LPAREN Exp RPAREN {$$ = new Exp(($2)->getType());}
+			|	Exp PLUS Exp {
+				checkNumValue($1);
+				checkNumValue($3);
+				$$ = getNumValue($1, $3);
+			}
+			|	Exp MINUS Exp {
+				checkNumValue($1);
+				checkNumValue($3);
+				$$ = getNumValue($1, $3);
+			}
+			|	Exp MUL Exp {
+				checkNumValue($1);
+				checkNumValue($3);
+				$$ = getNumValue($1, $3);
+			}
+			|	Exp DIV Exp {
+				checkNumValue($1);
+				checkNumValue($3);
+				$$ = getNumValue($1, $3);
+			}
+			|	ID {//TODO: Check ID Exists in symbol table, and determine type of expression according to ID type}
+			|	Call {//TODO: Check FuncID Exists in symbol table, and arglist is valid determine type of expression according to retType}
+			|	NUM {$$ = new Exp(($1)->getType();)} // Semantic check - make sure that
+			|	NUM B {checkByteSize(); $$ = new Exp(TypeN::BYTE);}
+			|	STRING {$$ = new Exp(TypeN::STRING);}
+			|	TRUE {$$ = new Exp(TypeN::BOOL);}
+			|	FALSE {$$ = new Exp(TypeN::BOOL);}
+			|	NOT Exp {checkBoolValue($2); $$ = new Exp(TypeN::BOOL);}
+			|	Exp AND Exp {checkBoolValue($1); checkBoolValue($3); $$ = new Exp(TypeN::BOOL);}
+			|	Exp OR Exp {checkBoolValue($1); checkBoolValue($3); $$ = new Exp(TypeN::BOOL);}
+			|	Exp RELOP Exp {checkNumValue($1); checkNumValue($3); $$ = new Exp(TypeN::BOOL);}
+			|	Exp EQUALOP Exp {checkNumValue($1); checkNumValue($3); $$ = new Exp(TypeN::BOOL);}
 ;
 
 %%

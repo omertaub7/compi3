@@ -25,13 +25,12 @@ string to_string(TypeN);
 
 /*
 class Value {
+public:
     TypeN type;
     int intValue;
     char byteValue;
     bool boolValue;
     string stringValue;
-
-public:
     Value() : type(TypeN::VOID) {}
     Value(int i) : type(TypeN::INT), intValue(i) {}
     Value(char c) : type(TypeN::BYTE), byteValue(c) {}
@@ -41,7 +40,6 @@ public:
     // TODO: add, assign, ...
 };
 */
-
 //====================== Node ===========================================
 
 class Node {
@@ -52,7 +50,8 @@ private:
 
 public:
     Node();
-    Node(string name, TypeN);
+    Node(string& s); 
+    Node(string& name, TypeN);
     virtual ~Node() = default;
     virtual string getName() const;
     virtual TypeN getType() const;
@@ -67,6 +66,49 @@ public:
     int value;
     Num(const char* x) : value(atoi(x)) {}
 };
+
+class Relop : public Node {
+public:
+    enum RelopType {REL_EQ, REL_NEQ, REL_GT, REL_GEQ, REL_LT, REL_LEQ};
+    RelopType t;
+    Relop(string& s) {
+        switch (s)  {
+            case "==": t = REL_EQ; break;
+            case "!=": t = REL_NEQ; break;
+            case ">": t = REL_GT; break;
+            case ">=": t = REL_GEQ; break;
+            case "<": t = REL_LT; break;
+            case "<=": t = REL_LEQ; break;
+            default: exit(-1);
+        }
+    }
+};
+
+class Binop : public Node {
+    public:
+    enum BinopType {PLUS, MINUS, MUL, DIV};
+    BinopType t;
+    Binop (string& s) {
+         switch (s)  {
+            case "+": t = PLUS; break;
+            case "-": t = MINUS; break;
+            case "/": t = DIV; break;
+            case "*": t = MUL; break;
+            default: exit(-1);
+        }
+    }
+};
+
+class Id : public Node {
+    public:
+    Id(string& s) : Node(s) {}
+};
+
+class String : public Node {
+    public:
+    string value;
+    String(string& s) : value(s) {}
+}
 
 // ========================= Exp ========================================
 /* can be created from the following rules:
@@ -84,15 +126,12 @@ public:
     Exp -> Exp OR Exp
     Exp -> Exp RELOP Exp
 */
-/*
 class Exp: public Node {
-    Value value;
+    
 
 public:
-    Exp(Value value);
-    getValue();
+    Exp(TypeN t);
 };
-*/
 
 
 /*
