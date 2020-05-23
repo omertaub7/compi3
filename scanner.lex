@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "output.hpp"
+#include "hw3_output.hpp"
 #include "parser.tab.hpp"
+#include "Node.hpp"
 
 %}
 
@@ -45,7 +46,10 @@ continue                    	{return CONTINUE;}
 \*                              {return MUL;}
 \/                         	 	{return DIV;}
 [a-zA-Z][a-zA-Z0-9]*        	{return ID;}
-0|[1-9][0-9]*               	{return NUM;}
+0|[1-9][0-9]*               	{
+                                    yylval=make_shared<Num>(yytext);
+                                    return NUM;
+                                }
 \"([^\n\r\"\\]|\\[rnt"\\])+\" 	{return STRING;}
 [\t\n\r ]                   	; 
 \/\/[^\r\n]*[\r|\n|\r\n]?     	;

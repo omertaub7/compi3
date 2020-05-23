@@ -1,20 +1,29 @@
 %{
 
 #include <iostream>
-#include "output.hpp"
+#include <memory>
+#include "hw3_output.hpp"
+#include "Node.hpp"
+/*
 #include "SymbolTable.hpp"
+*/
+/*
 #include "SyntaxExceptions.hpp"
-//#include "source.hpp"
-#define YYSTYPE Node*
+*/
+// #include "source.hpp"
 
 using namespace std;
+
+#define YYSTYPE shared_ptr<Node>
+
 
 void yyerror(const char*);
 
 extern int yylex();
 extern int yylineno;
+/*
 SymbolTable symbol_table;
-
+*/
 
 %}
 
@@ -64,72 +73,72 @@ SymbolTable symbol_table;
 
 
 %%
-Program: 		Funcs {output::printProductionRule(1);}
+Program: 		Funcs {}
 ;
-Funcs:			/*epsilon*/ {output::printProductionRule(2);}
-			|	FuncDecl Funcs {output::printProductionRule(3);}
+Funcs:			/*epsilon*/ {}
+			|	FuncDecl Funcs {}
 ;
 FuncDecl:		RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE 
-				{output::printProductionRule(4); //TODO: Push function symbol to global function symbol table}
+				{} //TODO: Push function symbol to global function symbol table
 ;
-RetType:		Type {output::printProductionRule(5);}
+RetType:		Type {}
 ;
-RetType:		VOID {output::printProductionRule(6);}
+RetType:		VOID {}
 ;
-Formals:		/*epsilon*/ {output::printProductionRule(7);}
-			|	FormalsList {output::printProductionRule(8);}
+Formals:		/*epsilon*/ {}
+			|	FormalsList {}
 ;
-FormalsList:	FormalDecl {output::printProductionRule(9);}
-			|	FormalDecl COMMA FormalsList {output::printProductionRule(10);}
+FormalsList:	FormalDecl {}
+			|	FormalDecl COMMA FormalsList {}
 ;
-FormalDecl:		Type ID {output::printProductionRule(11);}
+FormalDecl:		Type ID {}
 ;
-Statements:		Statement {output::printProductionRule(12);}
-			|	Statements Statement {output::printProductionRule(13);}
+Statements:		Statement {}
+			|	Statements Statement {}
 ;
-Statement:		LBRACE Statements RBRACE {output::printProductionRule(14);}	
-			| 	Type ID SC {output::printProductionRule(15);}
-			|	Type ID ASSIGN Exp SC {output::printProductionRule(16);}
-			|	ID ASSIGN Exp SC {output::printProductionRule(17);}
-			|	Call SC {output::printProductionRule(18);}
-			|	RETURN SC {output::printProductionRule(19);}
-			|	RETURN Exp SC {output::printProductionRule(20);}
+Statement:		LBRACE Statements RBRACE {}	
+			| 	Type ID SC {}
+			|	Type ID ASSIGN Exp SC {}
+			|	ID ASSIGN Exp SC {}
+			|	Call SC {}
+			|	RETURN SC {}
+			|	RETURN Exp SC {}
 			|	IF LPAREN Exp RPAREN Statement ELSE Statement 
-				{output::printProductionRule(22);}
-			|	IF LPAREN Exp RPAREN Statement {output::printProductionRule(21);}
+				{}
+			|	IF LPAREN Exp RPAREN Statement {}
 			|	WHILE LPAREN Exp RPAREN Statement ELSE Statement 
-				{output::printProductionRule(24);}
-			|   WHILE LPAREN Exp RPAREN Statement {output::printProductionRule(23);}
-			|	BREAK SC {output::printProductionRule(25);}
-			|	CONTINUE SC {output::printProductionRule(26);}
+				{}
+			|   WHILE LPAREN Exp RPAREN Statement {}
+			|	BREAK SC {}
+			|	CONTINUE SC {}
 ;
-Call:			ID LPAREN ExpList RPAREN {output::printProductionRule(27);}
-			|	ID LPAREN RPAREN {output::printProductionRule(28);}
+Call:			ID LPAREN ExpList RPAREN {}
+			|	ID LPAREN RPAREN {}
 ;
-ExpList:		Exp {output::printProductionRule(29);}
-			|	Exp COMMA ExpList {output::printProductionRule(30);}
+ExpList:		Exp {}
+			|	Exp COMMA ExpList {}
 ;
-Type:			INT {output::printProductionRule(31);}
-			|	BYTE {output::printProductionRule(32);}
-			|	BOOL {output::printProductionRule(33);}
+Type:			INT {}
+			|	BYTE {}
+			|	BOOL {}
 ;
-Exp:			LPAREN Exp RPAREN {output::printProductionRule(34);}
-			|	Exp PLUS Exp {output::printProductionRule(35);}
-			|	Exp MINUS Exp {output::printProductionRule(35);}
-			|	Exp MUL Exp {output::printProductionRule(35);}
-			|	Exp DIV Exp {output::printProductionRule(35);}
-			|	ID {output::printProductionRule(36);}
-			|	Call {output::printProductionRule(37);}
-			|	NUM {output::printProductionRule(38); //Semantic check - make sure that }
-			|	NUM B {output::printProductionRule(39);}
-			|	STRING {output::printProductionRule(40);}
-			|	TRUE {output::printProductionRule(41);}
-			|	FALSE {output::printProductionRule(42);}
-			|	NOT Exp {output::printProductionRule(43);}
-			|	Exp AND Exp {output::printProductionRule(44);}
-			|	Exp OR Exp {output::printProductionRule(45);}
-			|	Exp RELOP Exp {output::printProductionRule(46);}
-			|	Exp EQUALOP Exp {output::printProductionRule(46);}
+Exp:			LPAREN Exp RPAREN {}
+			|	Exp PLUS Exp {}
+			|	Exp MINUS Exp {}
+			|	Exp MUL Exp {}
+			|	Exp DIV Exp {}
+			|	ID {}
+			|	Call {}
+			|	NUM {} // Semantic check - make sure that
+			|	NUM B {}
+			|	STRING {}
+			|	TRUE {}
+			|	FALSE {}
+			|	NOT Exp {}
+			|	Exp AND Exp {}
+			|	Exp OR Exp {}
+			|	Exp RELOP Exp {}
+			|	Exp EQUALOP Exp {}
 ;
 
 %%
@@ -140,6 +149,8 @@ void yyerror(const char* msg) {
 }
 
 int main() {
+	return yyparse();
+	/*
 	int value = -1;
 	try {
 		value = yyparse();
@@ -173,4 +184,5 @@ int main() {
 		exit(0);
 	}
 	return value;
+	*/
 }
