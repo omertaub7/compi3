@@ -2,9 +2,10 @@
 
 #include <iostream>
 #include "output.hpp"
-
+#include "SymbolTable.hpp"
+#include "SyntaxExceptions.hpp"
 //#include "source.hpp"
-//#define YYSTYPE Node*
+#define YYSTYPE Node*
 
 using namespace std;
 
@@ -12,6 +13,8 @@ void yyerror(const char*);
 
 extern int yylex();
 extern int yylineno;
+SymbolTable symbol_table;
+
 
 %}
 
@@ -117,7 +120,7 @@ Exp:			LPAREN Exp RPAREN {output::printProductionRule(34);}
 			|	Exp DIV Exp {output::printProductionRule(35);}
 			|	ID {output::printProductionRule(36);}
 			|	Call {output::printProductionRule(37);}
-			|	NUM {output::printProductionRule(38);}
+			|	NUM {output::printProductionRule(38); //Semantic check - make sure that }
 			|	NUM B {output::printProductionRule(39);}
 			|	STRING {output::printProductionRule(40);}
 			|	TRUE {output::printProductionRule(41);}
@@ -137,6 +140,37 @@ void yyerror(const char* msg) {
 }
 
 int main() {
-    return yyparse();
+	int value = -1;
+	try {
+		value = yyparse();
+		symbol_table.endGlobalScope();
+	}	catch (const errorUndefException& e) {
+		errorUndef(yylineno, e.getID());
+		exit(0);
+	}	catch (const errorDefException& e) {
+		errorDef(yylineno, e.getID());
+		exit(0);
+	}	catch(const errorUndefFuncException& e) {
+		errorUndefFunc(yylineno, e.getID());
+		exit(0);
+	}	catch (const errorMismatchException& e) {
+		errorMismatch(yylineno);
+		exit(0);
+	}	catch (const errorPrototypeMismatchException& e) {
+		errorPrototypeMismatch(yylineno, e.getID(), e.getArgTypes());
+		exit(0);
+	}	catch (const errorUnexpectedBreakException& e) {
+		errorUnexpectedBreak(yylineno);
+		exit(0);
+	} 	catch (const errorUnexpectedContinueException& e) {
+		errorUnexpectedContinue(yylineno);
+		exit(0);
+	}	catch (const errorMainMissingException& e) {
+		errorMainMissing();
+		exit(0);
+	} 	catch(catch errorByteTooLargeException& e) {
+		errorByteTooLarge(yylineno, e.getValue());
+		exit(0);
+	}
+	return value;
 }
-
