@@ -16,23 +16,17 @@ class idException : public std::exception {
 
 class errorUndefException : public idException {
     public:
-    errorUndefException(string& s) {
-        idException(s);
-    }
+    errorUndefException(string& s) : idException(s) { }
 };
 
 class errorDefException : public idException {
     public:
-    errorDefException(string& s) {
-        idException(s);
-    }
+    errorDefException(string& s) : idException(s){ }
 };
 
 class errorUndefFuncException : public idException {
     public:
-    errorUndefFuncException(string& s) {
-        idException(s);
-    }
+    errorUndefFuncException(string& s) : idException(s) { }
 };
 
 /*======================Value Based Exception - ByteTooLarge======================*/
@@ -41,7 +35,7 @@ class errorByteTooLargeException : public std::exception {
     string v;
 
     public:
-    valueException (string& value) : v(value) {}
+    errorByteTooLargeException (string& value) : v(value) { }
     string& getValue() {
         return v;
     }
@@ -53,7 +47,7 @@ class errorPrototypeMismatchException : public std::exception {
     string id;
 
     public:
-    argListException (vector<string>& argTypes, string& id) : argTypes(argTypes), id(id) {}
+     errorPrototypeMismatchException (vector<string>& argTypes, string& id) : argTypes(argTypes), id(id) {}
     vector<string>& getArgTypes() {
         return argTypes;
     }
