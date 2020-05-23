@@ -1,3 +1,6 @@
+#ifndef _SYMBOL_TABLE
+#define _SYMBOL_TABLE
+
 #include "Node.hpp"
 #include <vector>
 #include "SyntaxExceptions.hpp"
@@ -24,3 +27,5 @@ class GlobalSymbolTable {
     void endGlobalScope();
 
 }
+
+#endif

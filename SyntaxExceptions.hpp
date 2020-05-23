@@ -1,3 +1,6 @@
+#ifndef _SYNTAX_EXCEPTIONS
+#define _SYNTAX_EXCEPTIONS
+
 #include <string>
 #include <vector>
 /*======================ID Based Exception - Def, Undef, UndefFunc======================*/
@@ -5,7 +8,7 @@ class idException : public std::exception {
     string id;
 
     public:
-    errorDef (string& name) : id(name) {}
+    idException (string& name) : id(name) {}
     string& getID() {
         return id;
     }
@@ -65,3 +68,4 @@ class errorUnexpectedBreakException : public std::exception {}
 class errorUnexpectedContinueException : public std::exception {}
 class errorMainMissingException : public  std::exception {}
 
+#endif
