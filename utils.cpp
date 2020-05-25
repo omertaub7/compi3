@@ -4,16 +4,14 @@
 vector<Node*> globalPtrArr;
 int nestedWhileCounter = 0;
 
+GlobalSymbolTable symbolTable;
 // TODO: put here the symbol table
 
 
 
 //==========================Utils=========================
-TypeN getIdType(Node*) {
-	// TODO: use the symbol table here
-	// TODO: check for undefined variable
-	// dummy
-	return TypeN::INT;
+TypeN getIdType(Node* idNode) {
+	return symbolTable.getSymbolType(idNode);
 }
 
 bool isByte(Node* pNode) {
@@ -30,9 +28,7 @@ bool isNumeric(Node* pNode) {
 }
 
 bool isFunc(Node* pNode) {
-	// TODO: implement with symbol table
-	// dummy
-	return true;
+	return symbolTable.checkSymbolIsFunction(pNode);
 }
 
 vector<TypeN> getFuncArgTypes(Node* pNode) {
@@ -41,9 +37,8 @@ vector<TypeN> getFuncArgTypes(Node* pNode) {
 		throw errorUndefFuncException(pNode->getName());
 	}
 	// dummy
-	vector<TypeN> argTypes;
-	argTypes.push_back(TypeN::INT);
-	return argTypes;
+	FuncDecl* func = dynamic_cast<FuncDecl*> pNode;
+	return symbolTable.getFunctionArgs(func);
 }
 
 TypeN getFuncType(Node* pNode) {
@@ -51,15 +46,12 @@ TypeN getFuncType(Node* pNode) {
 	if (!isFunc(pNode)) {
 		throw errorUndefFuncException(pNode->getName());
 	}
-	// dummy
-	return TypeN::INT;
+	FuncDecl* func = dynamic_cast<FuncDecl*> pNode;
+	return func->getType();
 }
 
 void insertNewVar(Node* pType, Node* pId) {
-	// TODO: implemnt with symbol table, insert a new variable
-	// TODO: check that it is not already defined
-	// dummy
-	return;
+	symbolTable.insertVarible(pType); //Shai: pID is needed? I Push the node as itself to the table, it holds name&type which I Need
 }
 
 bool checkAssign(TypeN target, TypeN source) {
@@ -116,8 +108,7 @@ void clearNodes() {
 
 void endCompilation() {
 	clearNodes();
-	// TODO: print all what is needed at the end of the program
-	// TODO: check if main is declared, if not throw the correct exception
+	symbolTable.endGlobalScope();
 }
 
 vector<string> typeVecToStringVec(const vector<TypeN> typeVec) {
@@ -534,9 +525,13 @@ FuncDecl* funcDecl(Node* pRetType, Node* pId, Node* pFormals, Node* pStatements)
 	assert(pStatements);
 	assert(checkPtr<Statements>(pStatements));
 
-	// TODO: check that the function is not already declared
-	// TODO: add the function to the symbol table
 	auto* p = new FuncDecl((RetType*)pRetType, (Formals*)pFormals);
+	try {
+		symbolTable.InsertFunction(p);
+	} catch (errorDefException& e) {
+		delete p;
+		throw e;
+	}
 	registerNode(p, pRetType, pId, pFormals, pStatements);
 	return p;
 }
@@ -617,4 +612,13 @@ void enterWhile() {
 
 void exitWhile() {
 	nestedWhileCounter--;
+}
+
+//====================== Scope handler ============================
+void enterScope() {
+	symbolTable.addNewScope();
+}
+
+void exitScope() {
+	symbolTable.popScope();
 }

@@ -8,6 +8,8 @@
 #include "Node.hpp"
 #include "hw3_output.hpp"
 #include "Exceptions.hpp"
+#include "SymbolTable.hpp"
+
 
 #include <iostream>
 #include <typeinfo>
@@ -188,5 +190,8 @@ FormalDecl* formalDecl(Node* pType, Node* pId);
 void enterWhile();
 void exitWhile();
 
+//====================== Scope handler ============================
+void enterScope();
+void exitScope();
 #endif // !_UTILS
 

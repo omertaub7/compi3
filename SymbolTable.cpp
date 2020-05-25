@@ -1,30 +1,30 @@
 #include "SymbolTable.hpp"
 
-void SymbolTable::insertVarible(Node* var) {
+void GlobalSymbolTable::insertVarible(Node* var) {
     //No Shadowing, first make sure that the new var does not exist in previous scopes
 
-    for (const Scope& s : scope_stack) { //all scopes loop
+    for (const Scope* s : scope_stack) { //all scopes loop
         for (cont std::pair<Node*, int> p : s) { //Current scope loop
-            if (p.getName() == var.getName()) {
-                throw errorDefException(p.getName());
+            if ((p.first())->getName() == var->getName()) {
+                throw errorDefException(var->getName());
             }
         }
     }
     int offset = offsets.back();
-    scope_stack.back().push_back(std::pair<Node*, int>(var, offset+1)); //Push to the end of current scope with offset+1
+    (scope_stack.back())->push_back(std::pair<Node*, int>(var, offset+1)); //Push to the end of current scope with offset+1
     offsets.pop_back(); //Update last offset to be incremented by 1
     offsets.push_back(offset+1);
 }
 
-void SymbolTable::addNewScope() {
+void GlobalSymbolTable::addNewScope() {
     int offset = offsets.back();
-    scope_stack.push_back(Scope());
+    scope_stack.push_back(new Scope());
     offsets.push_back(offset);
 }
 
-Scope SymbolTable::popScope() {
+Scope GlobalSymbolTable::popScope() {
     //Handle scope and offset stacks - pop from the top of the stack <==> end of the vector
-    Scope s = scope_stack.back();
+    Scope* s = scope_stack.back();
     scope_stack.pop_back();
     offsets.pop_back();
     //Print endScope line from output
@@ -34,11 +34,18 @@ Scope SymbolTable::popScope() {
         output::printID((s.first())->getName(), s.second(), (s.first())->getType());
     }
 
+    delete s;
+
 }
 
-void SymbolTable::insertFunction (Function* func) {
+void GlobalSymbolTable::insertFunction (FuncDecl* func) {
+    for (FuncDecl* f : functions) {
+        if (f->getName() == func->getName()) {
+            throw errorDefException(func->getName());
+        }
+    }
     functions.push_back(func);
-    std::vector<Node*> args = func->getArgList();
+    std::vector<Node*> args = func->argTypes();
     Scope function_scope;
     for (int i = 0; i < args.size(); i++) {
         function_scope.push_back(args[i], -1*(i+1));
@@ -63,4 +70,43 @@ void SymbolTable::endGlobalScope() {
     for (Function* func : functions) {
         output::printID(func->getName(), FUNCTIONS_OFFSET, output::makeFunctionType(func->getRetType(), func->getArgList()));
     }
+}
+
+
+Node* GlobalSymbolTable::getSymbolType(Node* symbol) {
+    //Go on all varibles in avaliable Scopes
+    for (const Scope* s : scope_stack) { //all scopes loop
+        for (cont std::pair<Node*, int> p : s) { //Current scope loop
+            if ((p.first())->getName() == symbol->getName()) {
+                return (p.first())->getType();
+            }
+        }
+    }
+    //Check if function
+    for (Function* func : functions) {
+        if (func->getName() == symbol->getName()) {
+            return func->getType();
+        }
+    }
+
+    throw errorUndefException(symbol->getName()); //Symbol is not defined as function or varible
+
+}
+
+bool GlobalSymbolTable::checkSymbolIsFunction(Node* symbol) {
+    for (Function* func : functions) {
+        if (func->getName() == symbol->getName()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+vector<TypeN> GlobalSymbolTable::getFunctionArgs(FuncDecl* symbol) {
+    for (Function* func : functions) {
+        if (func->getName() == symbol->getName()) {
+            return func->argTypes;
+        }
+    }
+    throw errorUndefFuncException(symbol->getName());
 }
