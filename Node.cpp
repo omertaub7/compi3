@@ -21,9 +21,11 @@ string to_string(TypeN type) {
 //=======================Node===================================
 Node::Node() : name(""), type(TypeN::VOID) {}
 
-Node::Node(string& s) : name(s), type(TypeN::VOID) { }
+Node::Node(const string& s) : name(s), type(TypeN::VOID) { }
 
-Node::Node(string& name, TypeN type) : name(name), type(type) {}
+Node::Node(TypeN type) : name(""), type(type) {}
+
+Node::Node(const string& name, TypeN type) : name(name), type(type) {}
 
 string Node::getName() const {
     return name;
@@ -55,3 +57,22 @@ string Node::_getClassName() const {
 }
 
 
+//========================== Exp List ====================================
+ExpList::ExpList(Exp* pExp) {
+    expList.push_back(pExp);
+}
+
+ExpList::ExpList(Exp* pExp, ExpList* pExpList) {
+    expList.push_back(pExp);
+    expList.insert(expList.end(), pExpList->expList.begin(), pExpList->expList.end());
+}
+
+//===========================FormalsList================================
+FormalsList::FormalsList(FormalDecl* pFormalDecl) {
+    argTypes.push_back(pFormalDecl->getType());
+}
+
+FormalsList::FormalsList(FormalDecl* pFormalDecl, FormalsList* pFormalsList) {
+    argTypes.push_back(pFormalDecl->getType());
+    argTypes.insert(argTypes.end(), pFormalsList->argTypes.begin(), pFormalsList->argTypes.end());
+}

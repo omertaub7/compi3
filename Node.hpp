@@ -2,46 +2,24 @@
 #ifndef _NODE
 #define _NODE
 
+#include <sstream>
 #include <vector>
 #include <string>
 #include <memory>
-#include <cstdlib>
-#include <cstring>
 
-#define YYSTYPE Node*
-
-using namespace std;
+using std::string;
+using std::ostream;
+using std::vector;
+using std::to_string;
 
 
 // scoped enum, to not interfere with the tokens
-enum class TypeN {VOID, BOOL, INT, BYTE, STRING};
+enum class TypeN { VOID, BOOL, INT, BYTE, STRING };
 
 ostream& operator<<(ostream&, TypeN);
 string to_string(TypeN);
 
-//=========================Value ========================================
-// This is for holding the value of the variable
-// here all the semantic checks will go to
-
-/*
-class Value {
-public:
-    TypeN type;
-    int intValue;
-    char byteValue;
-    bool boolValue;
-    string stringValue;
-    Value() : type(TypeN::VOID) {}
-    Value(int i) : type(TypeN::INT), intValue(i) {}
-    Value(char c) : type(TypeN::BYTE), byteValue(c) {}
-    Value(bool b) : type(TypeN::BOOL), boolValue(b) {}
-    Value(string s) : type(TypeN::STRING), stringValue(s) {}
-
-    // TODO: add, assign, ...
-};
-*/
 //====================== Node ===========================================
-
 class Node {
 private:
     string name;
@@ -50,151 +28,104 @@ private:
 
 public:
     Node();
-    Node(string& s); 
-    Node(string& name, TypeN);
+    Node(const string& s); 
+    Node(TypeN type);
+    Node(const string& name, TypeN);
     virtual ~Node() = default;
     virtual string getName() const;
     virtual TypeN getType() const;
     virtual void addChild(Node* child);
+
     // for testing only
     virtual vector<string> _getInfo() const;
     virtual string _getClassName() const;
 };
 
+//==========================Num=======================================
 class Num : public Node {
 public:
     int value;
-    Num(const char* x) : value(atoi(x)) {}
+    Num(const string& s) : value(stoi(s)) {}
 };
 
-class Relop : public Node {
-public:
-    enum RelopType {REL_EQ, REL_NEQ, REL_GT, REL_GEQ, REL_LT, REL_LEQ};
-    RelopType t;
-    Relop(string& s) {
-        switch (s)  {
-            case "==": t = REL_EQ; break;
-            case "!=": t = REL_NEQ; break;
-            case ">": t = REL_GT; break;
-            case ">=": t = REL_GEQ; break;
-            case "<": t = REL_LT; break;
-            case "<=": t = REL_LEQ; break;
-            default: exit(-1);
-        }
-    }
-};
-
-class Binop : public Node {
-    public:
-    enum BinopType {PLUS, MINUS, MUL, DIV};
-    BinopType t;
-    Binop (string& s) {
-         switch (s)  {
-            case "+": t = PLUS; break;
-            case "-": t = MINUS; break;
-            case "/": t = DIV; break;
-            case "*": t = MUL; break;
-            default: exit(-1);
-        }
-    }
-};
-
+//===========================ID===========================================
 class Id : public Node {
-    public:
-    Id(string& s) : Node(s) {}
+public:
+    Id(const string& name) : Node(name) {}
 };
-
-class String : public Node {
-    public:
-    string value;
-    String(string& s) : value(s) {}
-}
 
 // ========================= Exp ========================================
-/* can be created from the following rules:
-    Exp -> ( Exp )
-    Exp -> Exp BINOP Exp
-    Exp -> ID
-    Exp -> Call
-    Exp -> NUM
-    Exp -> NUM B
-    Exp -> STRING
-    Exp -> TRUE
-    Exp -> FALSE
-    Exp -> NOT Exp
-    Exp -> Exp AND Exp
-    Exp -> Exp OR Exp
-    Exp -> Exp RELOP Exp
-*/
 class Exp: public Node {
-    
-
 public:
-    Exp(TypeN t);
+    Exp(TypeN type) : Node(type) {}
 };
 
-
-/*
-class Program: public Node {
+//========================== Type =======================================
+class Type : public Node {
 public:
-    Program();
+    Type(TypeN type) : Node(type) {}
 };
 
-class Funcs: public Node {
+//========================== Exp List ====================================
+class ExpList : public Node {
 public:
-    Funcs();
+    vector<Exp*> expList;
+    ExpList(Exp*);
+    ExpList(Exp*, ExpList*);
 };
 
-class FuncDecl: public Node {
+//========================== Call ======================================
+class Call : public Node {
 public:
-    FuncDecl();
+    Call(TypeN type) : Node(type) {}
 };
+//========================= Statement =================================
+class Statement : public Node {};
 
-class RetType: public Node {
+//========================= Statements ================================
+class Statements : public Node {};
+
+//===========================FormalDecl================================
+class FormalDecl : public Node {
 public:
-    RetType();
+    FormalDecl(Type* type) : Node(type->getType()) {}
 };
 
-class Formals: public Node {
-    Formals();
-};
-
-class FormalsList: public Node {
+//===========================FormalsList================================
+class FormalsList : public Node {
 public:
-    FormalsList();
+    vector<TypeN> argTypes;
+    FormalsList(FormalDecl*);
+    FormalsList(FormalDecl*, FormalsList*);
 };
 
-class FormalDecl: public Node {
-public: 
-    FormalsDecl()
-};
-
-class Statements: public Node {
+//===========================Formals================================
+class Formals : public Node {
 public:
-    Statements();
+    vector<TypeN> argTypes;
+    Formals() = default;
+    Formals(FormalsList* pFormalsList) : argTypes(pFormalsList->argTypes) {}
 };
 
-class Statement: public Node {
+//===========================RetType================================
+class RetType : public Node {
 public:
-    Statement();
+    RetType() : Node(TypeN::VOID) {}
+    RetType(Type* pType) : Node(pType->getType()) {}
 };
 
-class Call: public Node {
+//===========================FuncDecl================================
+class FuncDecl : public Node {
 public:
-    Call();
+    vector<TypeN> argTypes;
+    FuncDecl(RetType* pRetType, Formals* pFormals) : Node(pRetType->getType()), argTypes(pFormals->argTypes)
+    {}
 };
 
-class ExpList: public Node {
-public:
-    ExpList();
-};
+//===========================Funcs=================================
+class Funcs : public Node {};
 
-class Type: public Node {
-public:
-    Type();
-};
-*/
-
-
+//===========================Program================================
+class Program : public Node {};
 
 #endif // _NODE
