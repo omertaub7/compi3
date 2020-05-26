@@ -14,6 +14,7 @@ class GlobalSymbolTable {
     std::vector<Scope*> scope_stack;
     std::vector<FuncDecl*> functions;
     std::vector<int> offsets;
+    std::vector<Node*> localNodeArr;
     TypeN currentReturnType;
     public:
     GlobalSymbolTable() {

@@ -48,9 +48,9 @@ void GlobalSymbolTable::insertFunction(RetType* t, Id* id, Formals* args) {
     functions.push_back(func);
     Scope* function_scope = new Scope();
     for (int i = 0; i < (args->argTypes).size(); i++) {
-        ;
-        //TODO: make sure that args vector of formals has also names of identifiers
-        //function_scope->push_back(std::pair<Node*, int>(args[i], -1*(i+1)));
+        Node* n = new Node(id->getName(), t->getType());
+        localNodeArr.push_back(n);
+        function_scope->push_back(std::pair<Node*, int>(n, -1*(i+1)));
     }
     scope_stack.push_back(function_scope);
 }
@@ -76,6 +76,10 @@ void GlobalSymbolTable::endGlobalScope() {
         }
         output::printID(func->getName(), FUNCTIONS_OFFSET, output::makeFunctionType(to_string(func->getType()), argTypeNames));
         delete func;
+    }
+
+    for (Node* n : localNodeArr) {
+        delete n;
     }
 }
 
