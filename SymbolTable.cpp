@@ -38,17 +38,17 @@ Scope GlobalSymbolTable::popScope() {
 
 }
 
-void GlobalSymbolTable::insertFunction (FuncDecl* func) {
+void GlobalSymbolTable::insertFunction(retType* t, ID* id, Formals* args) {
     for (FuncDecl* f : functions) {
-        if (f->getName() == func->getName()) {
+        if (f->getName() == id->getName()) {
             throw errorDefException(func->getName());
         }
     }
+    FuncDecl* func = new FuncDecl(t, id, args);
     functions.push_back(func);
-    std::vector<Node*> args = func->argTypes();
-    Scope function_scope;
+    Scope* function_scope = new Scope();
     for (int i = 0; i < args.size(); i++) {
-        function_scope.push_back(args[i], -1*(i+1));
+        function_scope->push_back(args[i], -1*(i+1));
     }
     scope_stack.push_back(function_scope);
 }
@@ -57,7 +57,7 @@ void GlobalSymbolTable::insertFunction (FuncDecl* func) {
 void SymbolTable::endGlobalScope() {
     bool found_main = false;
     for (Function* func : functions) {
-        if (func->getName() == "main") {
+        if ((func->getName() == "main") && ((func->argTypes).size()==0 /*Main Has no Args*/)) {
             found_main = true;
             break;
         }
@@ -69,6 +69,7 @@ void SymbolTable::endGlobalScope() {
     output::endScope();
     for (Function* func : functions) {
         output::printID(func->getName(), FUNCTIONS_OFFSET, output::makeFunctionType(func->getRetType(), func->getArgList()));
+        delete func;
     }
 }
 
@@ -109,4 +110,13 @@ vector<TypeN> GlobalSymbolTable::getFunctionArgs(FuncDecl* symbol) {
         }
     }
     throw errorUndefFuncException(symbol->getName());
+}
+
+
+TypeN GlobalSymbolTable::getCurrentReturnType() {
+    return currentReturnType;
+}
+    
+void GlobalSymbolTable::setCurrentReturnType(TypeN t) {
+    currentReturnType = t;
 }

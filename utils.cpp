@@ -5,7 +5,6 @@ vector<Node*> globalPtrArr;
 int nestedWhileCounter = 0;
 
 GlobalSymbolTable symbolTable;
-// TODO: put here the symbol table
 
 
 
@@ -32,11 +31,9 @@ bool isFunc(Node* pNode) {
 }
 
 vector<TypeN> getFuncArgTypes(Node* pNode) {
-	// TODO: implement with symbol table
 	if (!isFunc(pNode)) {
 		throw errorUndefFuncException(pNode->getName());
 	}
-	// dummy
 	FuncDecl* func = dynamic_cast<FuncDecl*> pNode;
 	return symbolTable.getFunctionArgs(func);
 }
@@ -71,9 +68,7 @@ bool checkAssign(TypeN target, TypeN source) {
 }
 
 TypeN getCurrFuncType() {
-	// TODO: implement with symbol table
-	// dummy
-	return TypeN::INT;
+	return symbolTable.getCurrentReturnType();
 }
 
 bool inWhile() {
@@ -621,4 +616,22 @@ void enterScope() {
 
 void exitScope() {
 	symbolTable.popScope();
+}
+
+void setReturnType(Node* retType) {
+	RetType* t = dynamic_cast<RetType> retType;
+	symbolTable.setCurrentReturnType(t->getType());
+}
+
+void addFunc(Node* retType, Node* identifier, Node* formals) {
+	RetType* t = dynamic_cast<RetType*> retType;
+	ID* id =  dynamic_cast<ID*> identifier;
+	Formals* f = dynamic_cast<Formals*> identifier;
+
+	assert(nullprt!= t && nullptr!= id && nullptr!= f);
+	symbolTable.insertFuction(t, id, f);
+}
+
+void exitFunc() {
+	exitScope();
 }

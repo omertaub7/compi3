@@ -193,5 +193,10 @@ void exitWhile();
 //====================== Scope handler ============================
 void enterScope();
 void exitScope();
+
+//====================== Functions handler ============================
+void exitFunc();
+void setReturnType(Node* retType);
+void addFunc(Node* retType, Node* ID, Node* Formals);
 #endif // !_UTILS
 
