@@ -34,7 +34,7 @@ vector<TypeN> getFuncArgTypes(Node* pNode) {
 	if (!isFunc(pNode)) {
 		throw errorUndefFuncException(pNode->getName());
 	}
-	FuncDecl* func = dynamic_cast<FuncDecl*> pNode;
+	FuncDecl* func = dynamic_cast<FuncDecl*>(pNode);
 	return symbolTable.getFunctionArgs(func);
 }
 
@@ -43,7 +43,7 @@ TypeN getFuncType(Node* pNode) {
 	if (!isFunc(pNode)) {
 		throw errorUndefFuncException(pNode->getName());
 	}
-	FuncDecl* func = dynamic_cast<FuncDecl*> pNode;
+	FuncDecl* func = dynamic_cast<FuncDecl*>(pNode);
 	return func->getType();
 }
 
@@ -520,9 +520,11 @@ FuncDecl* funcDecl(Node* pRetType, Node* pId, Node* pFormals, Node* pStatements)
 	assert(pStatements);
 	assert(checkPtr<Statements>(pStatements));
 
-	auto* p = new FuncDecl((RetType*)pRetType, (Formals*)pFormals);
+	auto* p = new FuncDecl((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
 	try {
-		symbolTable.InsertFunction(p);
+		/*TODO: Add to Formals all the names of the symbols.
+		We need it for function scope negetive offsets*/
+		symbolTable.insertFunction((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
 	} catch (errorDefException& e) {
 		delete p;
 		throw e;
@@ -619,17 +621,16 @@ void exitScope() {
 }
 
 void setReturnType(Node* retType) {
-	RetType* t = dynamic_cast<RetType> retType;
+	RetType* t = dynamic_cast<RetType*>(retType);
 	symbolTable.setCurrentReturnType(t->getType());
 }
 
 void addFunc(Node* retType, Node* identifier, Node* formals) {
-	RetType* t = dynamic_cast<RetType*> retType;
-	ID* id =  dynamic_cast<ID*> identifier;
-	Formals* f = dynamic_cast<Formals*> identifier;
+	RetType* t = dynamic_cast<RetType*>(retType);
+	Id* iden =  dynamic_cast<Id*>(identifier);
+	Formals* f = dynamic_cast<Formals*>(identifier);
 
-	assert(nullprt!= t && nullptr!= id && nullptr!= f);
-	symbolTable.insertFuction(t, id, f);
+	symbolTable.insertFunction(t, iden, f);
 }
 
 void exitFunc() {

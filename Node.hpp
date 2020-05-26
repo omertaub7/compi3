@@ -120,7 +120,7 @@ public:
     vector<TypeN> argTypes;
     FuncDecl(RetType* pRetType, Formals* pFormals) : Node(pRetType->getType()), argTypes(pFormals->argTypes)
     {}
-    FuncDecl(RetType* pRetType, ID* id, Formals* pFormals) : Node(id->getName(), pRetType->getType()), argTypes(pFormals->argTypes)
+    FuncDecl(RetType* pRetType, Id* i, Formals* pFormals) : Node(i->getName(), pRetType->getType()), argTypes(pFormals->argTypes)
     {}
 };
 

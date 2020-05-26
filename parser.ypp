@@ -60,7 +60,7 @@ Program: 		Funcs {$$ = program($1);}
 Funcs:			/*epsilon*/ {$$ = funcs();}
 			|	FuncDecl Funcs {$$ = funcsRightRec($1, $2);}
 ;
-FuncDecl:		RetType ID LPAREN Formals RPAREN {setCurrentReturnType($1); addFunc($1, $2, $4);} LBRACE Statements ExitFunc RBRACE 
+FuncDecl:		RetType ID LPAREN Formals RPAREN {setReturnType($1); addFunc($1, $2, $4);} LBRACE Statements ExitFunc RBRACE 
 				{$$ = funcDecl($1, $2, $4, $7);}
 ;
 RetType:		Type {$$ = retType($1);}

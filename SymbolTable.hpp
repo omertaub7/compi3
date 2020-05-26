@@ -3,13 +3,12 @@
 
 #include "Node.hpp"
 #include <vector>
-#include "SyntaxExceptions.hpp"
+#include "Exceptions.hpp"
 #include "hw3_output.hpp"
 using namespace output;
 
-typedef std::vector<std::pair<Node*>, int> Scope;
 
-
+typedef typename std::vector<std::pair<Node*, int >> Scope;
 
 class GlobalSymbolTable {
     std::vector<Scope*> scope_stack;
@@ -24,9 +23,9 @@ class GlobalSymbolTable {
     /*Symbol Table Modifiers*/
     void insertVarible(Node* var);
     void addNewScope();
-    Scope popScope();
+    void popScope();
     void addNewFunctionScope();
-    void insertFunction (retType* t, ID* id, Formals* args);
+    void insertFunction (RetType* t, Id* id, Formals* args);
     void endGlobalScope();
     
     /*Symbol Table Checkers*/
