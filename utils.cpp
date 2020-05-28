@@ -597,7 +597,7 @@ FormalDecl* formalDecl(Node* pType, Node* pId) {
 	assert(pId);
 	assert(checkPtr<Id>(pId));
 
-	auto* p = new FormalDecl((Type*)pType);
+	auto* p = new FormalDecl((Type*)pType, (Id*)pId);
 	registerNode(p, pType, pId);
 	return p;
 }

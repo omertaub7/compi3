@@ -69,10 +69,10 @@ ExpList::ExpList(Exp* pExp, ExpList* pExpList) {
 
 //===========================FormalsList================================
 FormalsList::FormalsList(FormalDecl* pFormalDecl) {
-    argTypes.push_back(pFormalDecl->getType());
+    argTypes.push_back(std::pair<string, TypeN>(pFormalDecl->getName(), pFormalDecl->getType()));
 }
 
 FormalsList::FormalsList(FormalDecl* pFormalDecl, FormalsList* pFormalsList) {
-    argTypes.push_back(pFormalDecl->getType());
+    argTypes.push_back(std::pair<string, TypeN>(pFormalDecl->getName(), pFormalDecl->getType()));
     argTypes.insert(argTypes.end(), pFormalsList->argTypes.begin(), pFormalsList->argTypes.end());
 }

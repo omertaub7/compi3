@@ -88,13 +88,13 @@ class Statements : public Node {};
 //===========================FormalDecl================================
 class FormalDecl : public Node {
 public:
-    FormalDecl(Type* type) : Node(type->getType()) {}
+    FormalDecl(Type* type, Id* id) : Node(id->getName(), type->getType()) {}
 };
 
 //===========================FormalsList================================
 class FormalsList : public Node {
 public:
-    vector<TypeN> argTypes;
+    vector<std::pair<string,TypeN> > argTypes;
     FormalsList(FormalDecl*);
     FormalsList(FormalDecl*, FormalsList*);
 };
@@ -102,7 +102,7 @@ public:
 //===========================Formals================================
 class Formals : public Node {
 public:
-    vector<TypeN> argTypes;
+    vector<std::pair<string,TypeN>> argTypes;
     Formals() = default;
     Formals(FormalsList* pFormalsList) : argTypes(pFormalsList->argTypes) {}
 };
