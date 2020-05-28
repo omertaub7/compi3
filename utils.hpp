@@ -46,7 +46,7 @@ bool isNumeric(Node*);
 bool isFunc(Node*);
 // vector with function's arg list types
 // if it has no args then returns an empty vector
-vector<TypeN> getFuncArgTypes(Node*);
+vector<std::pair<string,TypeN>> getFuncArgTypes(Node*);
 // the type of the function
 TypeN getFuncType(Node*);
 // insert a new variable to the table
@@ -64,7 +64,7 @@ void clearNodes();
 // to be called when the parser finished it's work
 void endCompilation();
 // convert a type vector to string vector
-vector<string> typeVecToStringVec(const vector<TypeN> typeVec);
+vector<string> typeVecToStringVec(const vector<std::pair<string,TypeN>> typeVec);
 
 // ====================scanner======================================
 Num* getNum(const string& s);

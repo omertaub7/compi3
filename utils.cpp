@@ -30,25 +30,22 @@ bool isFunc(Node* pNode) {
 	return symbolTable.checkSymbolIsFunction(pNode);
 }
 
-vector<TypeN> getFuncArgTypes(Node* pNode) {
+vector<std::pair<string,TypeN>> getFuncArgTypes(Node* pNode) {
 	if (!isFunc(pNode)) {
 		throw errorUndefFuncException(pNode->getName());
 	}
-	FuncDecl* func = dynamic_cast<FuncDecl*>(pNode);
-	return symbolTable.getFunctionArgs(func);
+	return symbolTable.getFunctionArgs(pNode);
 }
 
 TypeN getFuncType(Node* pNode) {
-	// TODO: implement with symbol table
-	if (!isFunc(pNode)) {
+	if (false == isFunc(pNode)) {
 		throw errorUndefFuncException(pNode->getName());
 	}
-	FuncDecl* func = dynamic_cast<FuncDecl*>(pNode);
-	return func->getType();
+	return symbolTable.getFuncRetType(pNode->getName());
 }
 
 void insertNewVar(Node* pType, Node* pId) {
-	symbolTable.insertVarible(pType); //Shai: pID is needed? I Push the node as itself to the table, it holds name&type which I Need
+	symbolTable.insertVarible(pId->getName(), pType->getType()); //Shai: pID is needed? I Push the node as itself to the table, it holds name&type which I Need
 }
 
 bool checkAssign(TypeN target, TypeN source) {
@@ -102,14 +99,13 @@ void clearNodes() {
 }
 
 void endCompilation() {
-	clearNodes();
 	symbolTable.endGlobalScope();
 }
 
-vector<string> typeVecToStringVec(const vector<TypeN> typeVec) {
+vector<string> typeVecToStringVec(const vector<std::pair<string,TypeN>> typeVec) {
 	vector<string> stringVec;
 	for (auto type : typeVec) {
-		stringVec.push_back(to_string(type));
+		stringVec.push_back(to_string(type.second));
 	}
 	return stringVec;
 }
@@ -294,14 +290,14 @@ Call* call(Node* pId, Node* pExpList) {
 	assert(pExpList);
 	assert(checkPtr<ExpList>(pExpList));
 
-	vector<TypeN> excpectedArgTypes = getFuncArgTypes(pId);
+	vector<std::pair<string,TypeN>> excpectedArgTypes = getFuncArgTypes(pId);
 	vector<Exp*>& recievedExpressions = ((ExpList*)pExpList)->expList;
 	vector<string> argTypesStr = typeVecToStringVec(excpectedArgTypes);
 	if (excpectedArgTypes.size() != recievedExpressions.size()) {
 		throw errorPrototypeMismatchException(argTypesStr, pId->getName());
 	}
 	for (int i = 0; i < excpectedArgTypes.size(); i++) {
-		if (excpectedArgTypes[i] != recievedExpressions[i]->getType()) {
+		if (excpectedArgTypes[i].second != recievedExpressions[i]->getType()) {
 			throw errorPrototypeMismatchException(argTypesStr, pId->getName());
 		}
 	}
@@ -314,7 +310,7 @@ Call* call(Node* pId) {
 	assert(pId);
 	assert(checkPtr<Id>(pId));
 
-	vector<TypeN> argTypes = getFuncArgTypes(pId);
+	vector<std::pair<string,TypeN>> argTypes = getFuncArgTypes(pId);
 	vector<string> argString = typeVecToStringVec(argTypes);
 	if (argTypes.size() != 0) {
 		throw errorPrototypeMismatchException(argString, pId->getName());
@@ -521,14 +517,6 @@ FuncDecl* funcDecl(Node* pRetType, Node* pId, Node* pFormals, Node* pStatements)
 	assert(checkPtr<Statements>(pStatements));
 
 	auto* p = new FuncDecl((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
-	try {
-		/*TODO: Add to Formals all the names of the symbols.
-		We need it for function scope negetive offsets*/
-		symbolTable.insertFunction((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
-	} catch (errorDefException& e) {
-		delete p;
-		throw e;
-	}
 	registerNode(p, pRetType, pId, pFormals, pStatements);
 	return p;
 }
@@ -628,7 +616,7 @@ void setReturnType(Node* retType) {
 void addFunc(Node* retType, Node* identifier, Node* formals) {
 	RetType* t = dynamic_cast<RetType*>(retType);
 	Id* iden =  dynamic_cast<Id*>(identifier);
-	Formals* f = dynamic_cast<Formals*>(identifier);
+	Formals* f = dynamic_cast<Formals*>(formals);
 
 	symbolTable.insertFunction(t, iden, f);
 }

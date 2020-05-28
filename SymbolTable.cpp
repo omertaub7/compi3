@@ -1,17 +1,18 @@
 #include "SymbolTable.hpp"
 
-void GlobalSymbolTable::insertVarible(Node* var) {
+void GlobalSymbolTable::insertVarible(string id, TypeN type) {
     //No Shadowing, first make sure that the new var does not exist in previous scopes
-
     for (Scope* s : scope_stack) { //all scopes loop
-        for (const std::pair<Node*, int> p : *s) { //Current scope loop
-            if ((p.first)->getName() == var->getName()) {
-                throw errorDefException(var->getName());
+        for (const std::pair<Node*, int>& p : *s) { //Current scope loop
+            if ((p.first)->getName() == id) {
+                throw errorDefException(id);
             }
         }
     }
     int offset = offsets.back();
-    (scope_stack.back())->push_back(std::pair<Node*, int>(var, offset+1)); //Push to the end of current scope with offset+1
+    Node* n = new Node(id, type);
+    localNodeArr.push_back(n);
+    (scope_stack.back())->push_back(std::pair<Node*, int>(n, offset+1)); //Push to the end of current scope with offset+1
     offsets.pop_back(); //Update last offset to be incremented by 1
     offsets.push_back(offset+1);
 }
@@ -34,7 +35,7 @@ void GlobalSymbolTable::popScope() {
         output::printID((symbol.first)->getName(), symbol.second, to_string((symbol.first)->getType()));
     }
 
-    delete s;
+    //delete s;
 
 }
 
@@ -48,7 +49,7 @@ void GlobalSymbolTable::insertFunction(RetType* t, Id* id, Formals* args) {
     functions.push_back(func);
     Scope* function_scope = new Scope();
     for (int i = 0; i < (args->argTypes).size(); i++) {
-        Node* n = new Node(args[i]->getName(), args[i]->getType());
+        Node* n = new Node(((args->argTypes)[i]).first, ((args->argTypes)[i]).second);
         localNodeArr.push_back(n); //For memory handling
         function_scope->push_back(std::pair<Node*, int>(n, -1*(i+1)));
     }
@@ -71,23 +72,22 @@ void GlobalSymbolTable::endGlobalScope() {
     output::endScope();
     for (FuncDecl* func : functions) {
         vector<string> argTypeNames;
-        for (TypeN t : func->argTypes) {
-            argTypeNames.push_back(to_string(t));
+        for (std::pair<string, TypeN>& t : func->argTypes) {
+            argTypeNames.push_back(to_string(t.second));
         }
         output::printID(func->getName(), FUNCTIONS_OFFSET, output::makeFunctionType(to_string(func->getType()), argTypeNames));
-        delete func;
     }
-
-    for (Node* n : localNodeArr) {
-        delete n;
-    }
+    functions.clear();
+    localNodeArr.clear();
+    scope_stack.clear();
+    offsets.clear();
 }
 
 
 TypeN GlobalSymbolTable::getSymbolType(Node* symbol) {
     //Go on all varibles in avaliable Scopes
     for (const Scope* s : scope_stack) { //all scopes loop
-        for (const std::pair<Node*, int> p : *s) { //Current scope loop
+        for (const std::pair<Node*, int>& p : *s) { //Current scope loop
             if ((p.first)->getName() == symbol->getName()) {
                 return (p.first)->getType();
             }
@@ -113,7 +113,7 @@ bool GlobalSymbolTable::checkSymbolIsFunction(Node* symbol) {
     return false;
 }
 
-vector<TypeN> GlobalSymbolTable::getFunctionArgs(FuncDecl* symbol) {
+vector<std::pair<string,TypeN>> GlobalSymbolTable::getFunctionArgs(Node* symbol) {
     for (FuncDecl* func : functions) {
         if (func->getName() == symbol->getName()) {
             return func->argTypes;
@@ -130,4 +130,13 @@ TypeN GlobalSymbolTable::getCurrentReturnType() {
     
 void GlobalSymbolTable::setCurrentReturnType(TypeN t) {
     currentReturnType = t;
+}
+
+TypeN GlobalSymbolTable::getFuncRetType(string name) {
+    for (FuncDecl* func : functions) {
+        if (func->getName() == name) {
+            return func->getType();
+        }
+    }
+    throw errorUndefFuncException(name);
 }

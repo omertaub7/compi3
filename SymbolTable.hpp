@@ -19,10 +19,20 @@ class GlobalSymbolTable {
     public:
     GlobalSymbolTable() {
         offsets.push_back(0);
+        FuncDecl* print = new FuncDecl("print", TypeN::VOID, 0);
+        FuncDecl* printi = new FuncDecl("printi", TypeN::VOID, 1);
+        functions.push_back(print);
+        functions.push_back(printi);
         currentReturnType =  TypeN::VOID;
     }
+    ~GlobalSymbolTable() { 
+        scope_stack.clear();
+        functions.clear();
+        offsets.clear();
+        localNodeArr.clear();
+    }
     /*Symbol Table Modifiers*/
-    void insertVarible(Node* var);
+    void insertVarible(string name, TypeN type);
     void addNewScope();
     void popScope();
     void addNewFunctionScope();
@@ -32,7 +42,8 @@ class GlobalSymbolTable {
     /*Symbol Table Checkers*/
     TypeN getSymbolType(Node* symbol); //Throws Undef
     bool checkSymbolIsFunction(Node* symbol);
-    vector<TypeN> getFunctionArgs(FuncDecl* Func);
+    vector<std::pair<string,TypeN>> getFunctionArgs(Node* pId);
+    TypeN getFuncRetType(string name);
     TypeN getCurrentReturnType();
     void setCurrentReturnType(TypeN t);
 };
