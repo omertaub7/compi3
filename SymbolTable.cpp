@@ -48,8 +48,8 @@ void GlobalSymbolTable::insertFunction(RetType* t, Id* id, Formals* args) {
     functions.push_back(func);
     Scope* function_scope = new Scope();
     for (int i = 0; i < (args->argTypes).size(); i++) {
-        Node* n = new Node(id->getName(), t->getType());
-        localNodeArr.push_back(n);
+        Node* n = new Node(args[i]->getName(), args[i]->getType());
+        localNodeArr.push_back(n); //For memory handling
         function_scope->push_back(std::pair<Node*, int>(n, -1*(i+1)));
     }
     scope_stack.push_back(function_scope);

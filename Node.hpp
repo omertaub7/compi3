@@ -117,7 +117,7 @@ public:
 //===========================FuncDecl================================
 class FuncDecl : public Node {
 public:
-    vector<TypeN> argTypes;
+    vector<string, TypeN> argTypes;
     FuncDecl(RetType* pRetType, Formals* pFormals) : Node(pRetType->getType()), argTypes(pFormals->argTypes)
     {}
     FuncDecl(RetType* pRetType, Id* i, Formals* pFormals) : Node(i->getName(), pRetType->getType()), argTypes(pFormals->argTypes)
