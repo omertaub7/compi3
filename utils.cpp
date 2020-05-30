@@ -1,16 +1,22 @@
 #include "utils.hpp"
 
+// for casting and testing for exact linenumber in assert
+#define CAST_PTR(T, p_dst, p_src) assert((p_src));\
+								  T *p_dst = dynamic_cast<T*>((p_src));\
+								  assert((p_dst));
+	
+
 //======================= global variables ===============
-vector<Node*> globalPtrArr;
+vector<Node*> *globalPtrArr;
 int nestedWhileCounter = 0;
 
-GlobalSymbolTable symbolTable;
+GlobalSymbolTable* symbolTable;
 
 
 
 //==========================Utils=========================
 TypeN getIdType(Node* idNode) {
-	return symbolTable.getSymbolType(idNode);
+	return symbolTable->getSymbolType(idNode);
 }
 
 bool isByte(Node* pNode) {
@@ -27,28 +33,31 @@ bool isNumeric(Node* pNode) {
 }
 
 bool isFunc(Node* pNode) {
-	return symbolTable.checkSymbolIsFunction(pNode);
+	return symbolTable->checkSymbolIsFunction(pNode);
 }
 
 vector<std::pair<string,TypeN>> getFuncArgTypes(Node* pNode) {
 	if (!isFunc(pNode)) {
 		throw errorUndefFuncException(pNode->getName());
 	}
-	return symbolTable.getFunctionArgs(pNode);
+	return symbolTable->getFunctionArgs(pNode);
 }
 
 TypeN getFuncType(Node* pNode) {
 	if (false == isFunc(pNode)) {
 		throw errorUndefFuncException(pNode->getName());
 	}
-	return symbolTable.getFuncRetType(pNode->getName());
+	return symbolTable->getFuncRetType(pNode->getName());
 }
 
 void insertNewVar(Node* pType, Node* pId) {
-	symbolTable.insertVarible(pId->getName(), pType->getType()); //Shai: pID is needed? I Push the node as itself to the table, it holds name&type which I Need
+	symbolTable->insertVarible(pId->getName(), pType->getType()); //Shai: pID is needed? I Push the node as itself to the table, it holds name&type which I Need
 }
 
 bool checkAssign(TypeN target, TypeN source) {
+	if (target == source) {
+		return true;
+	}
 	if (target == TypeN::INT) {
 		if (source == TypeN::INT || source == TypeN::BYTE) {
 			return true;
@@ -65,7 +74,7 @@ bool checkAssign(TypeN target, TypeN source) {
 }
 
 TypeN getCurrFuncType() {
-	return symbolTable.getCurrentReturnType();
+	return symbolTable->getCurrentReturnType();
 }
 
 bool inWhile() {
@@ -77,7 +86,7 @@ bool inWhile() {
 
 // saves the pointer in the global pointer arr, and sets the children
 void registerNode(Node* p, Node* c1, Node* c2, Node* c3, Node* c4) {
-	globalPtrArr.push_back(p);
+	globalPtrArr->push_back(p);
 	if (c1) {
 		p->addChild(c1);
 	}
@@ -92,14 +101,16 @@ void registerNode(Node* p, Node* c1, Node* c2, Node* c3, Node* c4) {
 	}
 }
 
-void clearNodes() {
-	for (auto p : globalPtrArr) {
+void clearMemory() {
+	for (auto p : *globalPtrArr) {
 		delete p;
 	}
+	delete globalPtrArr; // to avoid double deletes
+	delete symbolTable;
 }
 
 void endCompilation() {
-	symbolTable.endGlobalScope();
+	symbolTable->endGlobalScope();
 }
 
 vector<string> typeVecToStringVec(const vector<std::pair<string,TypeN>> typeVec) {
@@ -110,6 +121,10 @@ vector<string> typeVecToStringVec(const vector<std::pair<string,TypeN>> typeVec)
 	return stringVec;
 }
 
+void initGlobalVars() {
+	globalPtrArr = new vector<Node*>();
+	symbolTable = new GlobalSymbolTable();
+}
 // ====================scanner======================================
 Num* getNum(const string& s) {
 	auto p = new Num(s);
@@ -297,7 +312,7 @@ Call* call(Node* pId, Node* pExpList) {
 		throw errorPrototypeMismatchException(argTypesStr, pId->getName());
 	}
 	for (int i = 0; i < excpectedArgTypes.size(); i++) {
-		if (excpectedArgTypes[i].second != recievedExpressions[i]->getType()) {
+		if (! checkAssign(excpectedArgTypes[i].second, recievedExpressions[i]->getType())) {
 			throw errorPrototypeMismatchException(argTypesStr, pId->getName());
 		}
 	}
@@ -310,7 +325,7 @@ Call* call(Node* pId) {
 	assert(pId);
 	assert(checkPtr<Id>(pId));
 
-	vector<std::pair<string,TypeN>> argTypes = getFuncArgTypes(pId);
+	vector<std::pair<string, TypeN>> argTypes = getFuncArgTypes(pId);
 	vector<string> argString = typeVecToStringVec(argTypes);
 	if (argTypes.size() != 0) {
 		throw errorPrototypeMismatchException(argString, pId->getName());
@@ -480,6 +495,8 @@ Program* program(Node* pFuncs) {
 	assert(pFuncs);
 	assert(checkPtr<Funcs>(pFuncs));
 
+	endCompilation();
+
 	auto* p = new Program();
 	registerNode(p, pFuncs);
 	return p;
@@ -601,24 +618,24 @@ void exitWhile() {
 
 //====================== Scope handler ============================
 void enterScope() {
-	symbolTable.addNewScope();
+	symbolTable->addNewScope();
 }
 
 void exitScope() {
-	symbolTable.popScope();
+	symbolTable->popScope();
 }
 
 void setReturnType(Node* retType) {
-	RetType* t = dynamic_cast<RetType*>(retType);
-	symbolTable.setCurrentReturnType(t->getType());
+	CAST_PTR(RetType, t, retType);
+	symbolTable->setCurrentReturnType(t->getType());
 }
 
 void addFunc(Node* retType, Node* identifier, Node* formals) {
-	RetType* t = dynamic_cast<RetType*>(retType);
-	Id* iden =  dynamic_cast<Id*>(identifier);
-	Formals* f = dynamic_cast<Formals*>(formals);
+	CAST_PTR(RetType, t, retType);
+	CAST_PTR(Id, iden, identifier);
+	CAST_PTR(Formals, f, formals);
 
-	symbolTable.insertFunction(t, iden, f);
+	symbolTable->insertFunction(t, iden, f);
 }
 
 void exitFunc() {

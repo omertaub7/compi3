@@ -60,11 +60,12 @@ bool inWhile();
 // saves the pointer in the global pointer arr, and sets the children
 void registerNode(Node* p, Node* c1 = NULL, Node* c2 = NULL, Node* c3 = NULL, Node* c4 = NULL);
 // deletes all the pointer that where allocated
-void clearNodes();
+void clearMemory();
 // to be called when the parser finished it's work
 void endCompilation();
 // convert a type vector to string vector
 vector<string> typeVecToStringVec(const vector<std::pair<string,TypeN>> typeVec);
+void initGlobalVars();
 
 // ====================scanner======================================
 Num* getNum(const string& s);

@@ -9,13 +9,13 @@ ostream& operator<<(ostream& os, TypeN type) {
 string to_string(TypeN type) {
     switch (type)
     {
-        case TypeN::INT: return "int"; break;
-        case TypeN::VOID: return "void"; break;
-        case TypeN::BYTE: return "byte"; break;
-        case TypeN::STRING: return "string"; break;
+        case TypeN::INT: return "INT"; break;
+        case TypeN::VOID: return "VOID"; break;
+        case TypeN::BYTE: return "BYTE"; break;
+        case TypeN::STRING: return "STRING"; break;
     }
     // TypeN::BOOL
-    return "bool";
+    return "BOOL";
 }
 
 //=======================Node===================================
