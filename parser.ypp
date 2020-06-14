@@ -144,7 +144,7 @@ void yyerror(const char* msg) {
 }
 
 int main() {
-	
+	init_global_prog();
 	int value = -1;
 	initGlobalVars();
 
@@ -187,6 +187,6 @@ int main() {
 	}
 
 	clearMemory();
-
+	end_global_prog();
 	return value;
 }

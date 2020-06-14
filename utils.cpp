@@ -11,7 +11,7 @@ vector<Node*> *globalPtrArr;
 int nestedWhileCounter = 0;
 
 GlobalSymbolTable* symbolTable;
-
+CodeBuffer codeBuffer;
 
 
 //==========================Utils=========================
@@ -615,4 +615,26 @@ void addFunc(Node* retType, Node* identifier, Node* formals) {
 
 void exitFunc() {
 	exitScope();
+}
+
+//====================== LLVM Code handlers ============================
+void init_global_prog() {
+    codeBuffer.emit("declare i32 @printf(i8*,...)");
+	codeBuffer.emit("declare void @exit(i32)");
+	codeBuffer.emit("define void @printi(i32) {"); 
+    codeBuffer.emit("call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4x i8]* @.int_specifier, i32 0, i32 0), i32 %0)");
+    codeBuffer.emit("ret void");
+	codeBuffer.emit("}");
+	codeBuffer.emit("define void @print(i8*) {");
+ 	codeBuffer.emit("call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4x i8]* @.str_specifier, i32 0, i32 0), i8* %0)");
+	codeBuffer.emit("ret void");
+    codeBuffer.emit("}");
+    codeBuffer.emit("define i32 @main() {");
+}
+
+void end_global_prog() {
+	codeBuffer.emit("end:");
+	codeBuffer.emit("ret i32 0");
+	codeBuffer.emit("}");
+	codeBuffer.printCodeBuffer();
 }

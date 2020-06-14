@@ -9,7 +9,7 @@
 #include "hw3_output.hpp"
 #include "Exceptions.hpp"
 #include "SymbolTable.hpp"
-
+#include "bp.hpp"
 
 #include <iostream>
 #include <typeinfo>
@@ -199,5 +199,12 @@ void exitScope();
 void exitFunc();
 void setReturnType(Node* retType);
 void addFunc(Node* retType, Node* ID, Node* Formals);
+
+
+//====================== LLVM Code handlers ============================
+void init_global_prog();
+void end_global_prog();
 #endif // !_UTILS
+
+
 
