@@ -33,13 +33,13 @@ void GlobalSymbolTable::popScope() {
     Scope& s = scope_stack.back();
     
     //Print endScope line from output
-    output::endScope();
+    //output::endScope();
 
     for (VarOffset& symbol : s) {
         string name = symbol.first.getName();
         TypeN type = symbol.first.getType();
         int offset = symbol.second;
-        output::printID(name, offset, to_string(type));
+        //output::printID(name, offset, to_string(type));
     }
 
     scope_stack.pop_back();
@@ -80,13 +80,13 @@ void GlobalSymbolTable::endGlobalScope() {
     if (false == found_main) {
         throw errorMainMissingException();
     }
-    output::endScope();
+    //output::endScope();
     for (FuncDecl& func : functions) {
         vector<string> argTypeNames;
         for (std::pair<string, TypeN>& t : func.argTypes) {
             argTypeNames.push_back(to_string(t.second));
         }
-        output::printID(func.getName(), FUNCTIONS_OFFSET, output::makeFunctionType(to_string(func.getType()), argTypeNames));
+        //output::printID(func.getName(), FUNCTIONS_OFFSET, output::makeFunctionType(to_string(func.getType()), argTypeNames));
     }
 }
 
