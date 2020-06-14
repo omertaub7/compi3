@@ -1,74 +1,70 @@
 #include "utils.hpp"
 
+// for casting and testing for exact linenumber in assert
+#define CAST_PTR(T, p_dst, p_src) assert((p_src));\
+								  T *p_dst = dynamic_cast<T*>((p_src));\
+								  assert((p_dst));
+	
+
 //======================= global variables ===============
-vector<Node*> globalPtrArr;
+vector<Node*> *globalPtrArr;
 int nestedWhileCounter = 0;
 
-GlobalSymbolTable symbolTable;
+GlobalSymbolTable* symbolTable;
 
 
 
 //==========================Utils=========================
-TypeN getIdType(Node* idNode) {
-	return symbolTable.getSymbolType(idNode);
+TypeN getIdType(Node* id) {
+	return symbolTable->getSymbolType(id);
 }
 
-bool isByte(Node* pNode) {
-	Num* pNum = (Num*)(pNode);
-	return (pNum->value <= 255 && pNum->value >= 0);
+bool isByte(Num* num) {
+	return (num->value <= 255 && num->value >= 0);
 }
 
-bool isBool(Node* pNode) {
-	return (pNode->getType() == TypeN::BOOL);
+bool isBool(Node* exp) {
+	return (exp->getType() == TypeN::BOOL);
 }
 
-bool isNumeric(Node* pNode) {
-	return (pNode->getType() == TypeN::INT || pNode->getType() == TypeN::BYTE);
+bool isNumeric(Node* exp) {
+	return (exp->getType() == TypeN::INT || exp->getType() == TypeN::BYTE);
 }
 
-bool isFunc(Node* pNode) {
-	return symbolTable.checkSymbolIsFunction(pNode);
+bool isFunc(Node* id) {
+	return symbolTable->checkSymbolIsFunction(id);
 }
 
-vector<TypeN> getFuncArgTypes(Node* pNode) {
-	if (!isFunc(pNode)) {
-		throw errorUndefFuncException(pNode->getName());
+vector<std::pair<string,TypeN>> getFuncArgTypes(Node* id) {
+	if (!isFunc(id)) {
+		throw errorUndefFuncException(id->getName());
 	}
-	FuncDecl* func = dynamic_cast<FuncDecl*>(pNode);
-	return symbolTable.getFunctionArgs(func);
+	return symbolTable->getFunctionArgs(id);
 }
 
-TypeN getFuncType(Node* pNode) {
-	// TODO: implement with symbol table
-	if (!isFunc(pNode)) {
-		throw errorUndefFuncException(pNode->getName());
+TypeN getFuncType(Node* id) {
+	if (!isFunc(id)) {
+		throw errorUndefFuncException(id->getName());
 	}
-	FuncDecl* func = dynamic_cast<FuncDecl*>(pNode);
-	return func->getType();
+	return symbolTable->getFuncRetType(id->getName());
 }
 
-void insertNewVar(Node* pType, Node* pId) {
-	symbolTable.insertVarible(pType); //Shai: pID is needed? I Push the node as itself to the table, it holds name&type which I Need
+void insertNewVar(Node* type, Node* id) {
+	symbolTable->insertVarible(id->getName(), type->getType());
 }
 
 bool checkAssign(TypeN target, TypeN source) {
-	if (target == TypeN::INT) {
-		if (source == TypeN::INT || source == TypeN::BYTE) {
-			return true;
-		}
-		return false;
-	}
-	if (target == TypeN::BOOL && source == TypeN::BOOL) {
+	if (target == source) {
 		return true;
 	}
-	if (target == TypeN::BYTE && source == TypeN::BYTE) {
+	if (target == TypeN::INT && source == TypeN::BYTE) {
 		return true;
 	}
 	return false;
 }
 
 TypeN getCurrFuncType() {
-	return symbolTable.getCurrentReturnType();
+	return symbolTable->getCurrentReturnType();
 }
 
 bool inWhile() {
@@ -80,7 +76,7 @@ bool inWhile() {
 
 // saves the pointer in the global pointer arr, and sets the children
 void registerNode(Node* p, Node* c1, Node* c2, Node* c3, Node* c4) {
-	globalPtrArr.push_back(p);
+	globalPtrArr->push_back(p);
 	if (c1) {
 		p->addChild(c1);
 	}
@@ -95,25 +91,30 @@ void registerNode(Node* p, Node* c1, Node* c2, Node* c3, Node* c4) {
 	}
 }
 
-void clearNodes() {
-	for (auto p : globalPtrArr) {
+void clearMemory() {
+	for (auto p : *globalPtrArr) {
 		delete p;
 	}
+	delete globalPtrArr;
+	delete symbolTable;
 }
 
 void endCompilation() {
-	clearNodes();
-	symbolTable.endGlobalScope();
+	symbolTable->endGlobalScope();
 }
 
-vector<string> typeVecToStringVec(const vector<TypeN> typeVec) {
+vector<string> typeVecToStringVec(const vector<std::pair<string,TypeN>> typeVec) {
 	vector<string> stringVec;
 	for (auto type : typeVec) {
-		stringVec.push_back(to_string(type));
+		stringVec.push_back(to_string(type.second));
 	}
 	return stringVec;
 }
 
+void initGlobalVars() {
+	globalPtrArr = new vector<Node*>();
+	symbolTable = new GlobalSymbolTable();
+}
 // ====================scanner======================================
 Num* getNum(const string& s) {
 	auto p = new Num(s);
@@ -127,69 +128,61 @@ Id* getId(const string& s) {
 }
 
 //=====================Exp Rules=====================================
-Exp* expFromExp(Node* pNode) {
-	assert(pNode);
-	assert(checkPtr<Exp>(pNode));
+Exp* expFromExp(Node* pExp) {
+	CAST_PTR(Exp, exp, pExp);
 	
-	auto* p = new Exp(pNode->getType());
-	registerNode(p, pNode);
+	auto* p = new Exp(exp->getType());
+	registerNode(p, exp);
 	return p;
 }
 
-Exp* expFromBinop(Node* pNode1, Node* pNode2) {
-	assert(pNode1);
-	assert(pNode2);
-	assert(checkPtr<Exp>(pNode1));
-	assert(checkPtr<Exp>(pNode2));
+Exp* expFromBinop(Node* pExp1, Node* pExp2) {
+	CAST_PTR(Exp, exp1, pExp1);
+	CAST_PTR(Exp, exp2, pExp2);
 
 	TypeN type = TypeN::INT;
-	if (!(isNumeric(pNode1) && isNumeric(pNode2))) {
+	if (!(isNumeric(exp1) && isNumeric(exp2))) {
 		throw errorMismatchException();
 	}
-	if (pNode1->getType() == TypeN::BYTE && pNode2->getType() == TypeN::BYTE) {
+	if (exp1->getType() == TypeN::BYTE && exp2->getType() == TypeN::BYTE) {
 		type = TypeN::BYTE;
 	}
 	auto* p = new Exp(type);
-	registerNode(p, pNode1, pNode2);
+	registerNode(p, exp1, exp2);
 	return p; 
 }
 
-Exp* expFromId(Node* pNode) {
-	assert(pNode);
-	assert(checkPtr<Id>(pNode));
+Exp* expFromId(Node* pId) {
+	CAST_PTR(Id, id, pId);
 
-	auto* p = new Exp(getIdType(pNode));
-	registerNode(p, pNode);
+	auto* p = new Exp(getIdType(id));
+	registerNode(p, id);
 	return p;
 }
 
-Exp* expFromCall(Node* pNode) {
-	assert(pNode);
-	assert(checkPtr<Call>(pNode));
+Exp* expFromCall(Node* pCall) {
+	CAST_PTR(Call, call, pCall);
 
-	auto* p = new Exp(pNode->getType());
-	registerNode(p, pNode);
+	auto* p = new Exp(call->getType());
+	registerNode(p, call);
 	return p;
 }
 
-Exp* expFromNum(Node* pNode) {
-	assert(pNode);
-	assert(checkPtr<Num>(pNode));
-
+Exp* expFromNum(Node* pNum) {
+	CAST_PTR(Num, num, pNum);
 	auto* p = new Exp(TypeN::INT);
-	registerNode(p, pNode);
+	registerNode(p, num);
 	return p;
 }
 
-Exp* expFromByte(Node* pNode) {
-	assert(pNode);
-	assert(checkPtr<Num>(pNode));
+Exp* expFromByte(Node* pNum) {
+	CAST_PTR(Num, num, pNum);
 
-	if (!isByte(pNode)) {
-		throw errorByteTooLargeException(to_string(((Num*)pNode)->value));
+	if (!isByte(num)) {
+		throw errorByteTooLargeException(to_string(num->value));
 	}
 	auto* p = new Exp(TypeN::BYTE);
-	registerNode(p, pNode);
+	registerNode(p, num);
 	return p;
 }
 
@@ -205,43 +198,38 @@ Exp* expFromBool() {
 	return p;
 }
 
-Exp* expFromNot(Node* pNode) {
-	assert(pNode);
-	assert(checkPtr<Exp>(pNode));
+Exp* expFromNot(Node* pExp) {
+	CAST_PTR(Exp, exp, pExp);
 
-	if (!isBool(pNode)) {
+	if (!isBool(exp)) {
 		throw errorMismatchException();
 	}
 	auto* p = new Exp(TypeN::BOOL);
-	registerNode(p, pNode);
+	registerNode(p, exp);
 	return p;
 }
 
-Exp* expFromLogicop(Node* pNode1, Node* pNode2) {
-	assert(pNode1);
-	assert(checkPtr<Exp>(pNode1));
-	assert(pNode2);
-	assert(checkPtr<Exp>(pNode2));
+Exp* expFromLogicop(Node* pExp1, Node* pExp2) {
+	CAST_PTR(Exp, exp1, pExp1);
+	CAST_PTR(Exp, exp2, pExp2);
 
-	if (!(isBool(pNode1) && isBool(pNode2))) {
+	if (!(isBool(exp1) && isBool(exp2))) {
 		throw errorMismatchException();
 	}
 	auto* p = new Exp(TypeN::BOOL);
-	registerNode(p, pNode1, pNode2);
+	registerNode(p, exp1, exp2);
 	return p;
 }
 
-Exp* expFromRelop(Node* pNode1, Node* pNode2) {
-	assert(pNode1);
-	assert(checkPtr<Exp>(pNode1));
-	assert(pNode2);
-	assert(checkPtr<Exp>(pNode2));
+Exp* expFromRelop(Node* pExp1, Node* pExp2) {
+	CAST_PTR(Exp, exp1, pExp1);
+	CAST_PTR(Exp, exp2, pExp2);
 
-	if (!(isNumeric(pNode1) && isNumeric(pNode2))) {
+	if (!(isNumeric(exp1) && isNumeric(exp2))) {
 		throw errorMismatchException();
 	}
 	auto* p = new Exp(TypeN::BOOL);
-	registerNode(p, pNode1, pNode2);
+	registerNode(p, exp1, exp2);
 	return p;
 }
 
@@ -267,60 +255,54 @@ Type* typeBool() {
 //=======================Exp List Rules =======================
 // ExpList -> Exp
 ExpList* expListFromExp(Node* pExp) {
-	assert(pExp);
-	assert(checkPtr<Exp>(pExp));
+	CAST_PTR(Exp, exp, pExp);
 
-	auto* p = new ExpList((Exp*)pExp);
-	registerNode(p, pExp);
+	auto* p = new ExpList(exp);
+	registerNode(p, exp);
 	return p;
 }
 
 // ExpList -> Exp COMMA ExpList
 ExpList* expListRightRec(Node* pExp, Node* pExpList) {
-	assert(pExp);
-	assert(checkPtr<Exp>(pExp));
-	assert(pExpList);
-	assert(checkPtr<ExpList>(pExpList));
+	CAST_PTR(Exp, exp, pExp);
+	CAST_PTR(ExpList, expList, pExpList);
 
-	auto* p = new ExpList((Exp*)pExp, (ExpList*)pExpList);
-	registerNode(p, pExp, pExpList);
+	auto* p = new ExpList(exp, expList);
+	registerNode(p, exp, expList);
 	return p;
 }
 
 //========================Call Rules ==========================
 Call* call(Node* pId, Node* pExpList) {
-	assert(pId);
-	assert(checkPtr<Id>(pId));
-	assert(pExpList);
-	assert(checkPtr<ExpList>(pExpList));
+	CAST_PTR(Id, id, pId);
+	CAST_PTR(ExpList, expList, pExpList);
 
-	vector<TypeN> excpectedArgTypes = getFuncArgTypes(pId);
-	vector<Exp*>& recievedExpressions = ((ExpList*)pExpList)->expList;
+	vector<std::pair<string,TypeN>> excpectedArgTypes = getFuncArgTypes(id);
+	vector<Exp*>& recievedExpressions = (expList)->expList;
 	vector<string> argTypesStr = typeVecToStringVec(excpectedArgTypes);
 	if (excpectedArgTypes.size() != recievedExpressions.size()) {
-		throw errorPrototypeMismatchException(argTypesStr, pId->getName());
+		throw errorPrototypeMismatchException(argTypesStr, id->getName());
 	}
 	for (int i = 0; i < excpectedArgTypes.size(); i++) {
-		if (excpectedArgTypes[i] != recievedExpressions[i]->getType()) {
-			throw errorPrototypeMismatchException(argTypesStr, pId->getName());
+		if (! checkAssign(excpectedArgTypes[i].second, recievedExpressions[i]->getType())) {
+			throw errorPrototypeMismatchException(argTypesStr, id->getName());
 		}
 	}
-	auto* p = new Call(getFuncType(pId));
-	registerNode(p, pId, pExpList);
+	auto* p = new Call(getFuncType(id));
+	registerNode(p, id, expList);
 	return p;
 }
 
 Call* call(Node* pId) {
-	assert(pId);
-	assert(checkPtr<Id>(pId));
+	CAST_PTR(Id, id, pId);
 
-	vector<TypeN> argTypes = getFuncArgTypes(pId);
+	vector<std::pair<string, TypeN>> argTypes = getFuncArgTypes(id);
 	vector<string> argString = typeVecToStringVec(argTypes);
 	if (argTypes.size() != 0) {
-		throw errorPrototypeMismatchException(argString, pId->getName());
+		throw errorPrototypeMismatchException(argString, id->getName());
 	}
-	auto* p = new Call(getFuncType(pId));
-	registerNode(p, pId);
+	auto* p = new Call(getFuncType(id));
+	registerNode(p, id);
 	return p;
 }
 
@@ -484,6 +466,8 @@ Program* program(Node* pFuncs) {
 	assert(pFuncs);
 	assert(checkPtr<Funcs>(pFuncs));
 
+	endCompilation();
+
 	auto* p = new Program();
 	registerNode(p, pFuncs);
 	return p;
@@ -521,14 +505,6 @@ FuncDecl* funcDecl(Node* pRetType, Node* pId, Node* pFormals, Node* pStatements)
 	assert(checkPtr<Statements>(pStatements));
 
 	auto* p = new FuncDecl((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
-	try {
-		/*TODO: Add to Formals all the names of the symbols.
-		We need it for function scope negetive offsets*/
-		symbolTable.insertFunction((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
-	} catch (errorDefException& e) {
-		delete p;
-		throw e;
-	}
 	registerNode(p, pRetType, pId, pFormals, pStatements);
 	return p;
 }
@@ -579,13 +555,17 @@ FormalsList* formalsList(Node* pFormalDecl) {
 }
 
 FormalsList* formalsListRightRec(Node* pFormalDecl, Node* pFormalsList) {
-	assert(pFormalDecl);
-	assert(checkPtr<FormalDecl>(pFormalDecl));
-	assert(pFormalsList);
-	assert(checkPtr<FormalsList>(pFormalsList));
+	CAST_PTR(FormalDecl, formalDecl, pFormalDecl);
+	CAST_PTR(FormalsList, formalsList, pFormalsList);
 
-	// TODO check that we do not have to arguments with the same name
-	auto* p = new FormalsList((FormalDecl*)pFormalDecl, (FormalsList*)pFormalsList);
+	// check that we do not have to arguments with the same name
+	string currName = formalDecl->getName();
+	for (std::pair<string, TypeN>& nameType : formalsList->argTypes) {
+		if (currName == nameType.first) {
+			throw errorDefException(currName);
+		}
+	}
+	auto* p = new FormalsList(formalDecl, formalsList);
 	registerNode(p, pFormalDecl, pFormalsList);
 	return p;
 }
@@ -613,24 +593,24 @@ void exitWhile() {
 
 //====================== Scope handler ============================
 void enterScope() {
-	symbolTable.addNewScope();
+	symbolTable->addNewScope();
 }
 
 void exitScope() {
-	symbolTable.popScope();
+	symbolTable->popScope();
 }
 
 void setReturnType(Node* retType) {
-	RetType* t = dynamic_cast<RetType*>(retType);
-	symbolTable.setCurrentReturnType(t->getType());
+	CAST_PTR(RetType, t, retType);
+	symbolTable->setCurrentReturnType(t->getType());
 }
 
 void addFunc(Node* retType, Node* identifier, Node* formals) {
-	RetType* t = dynamic_cast<RetType*>(retType);
-	Id* iden =  dynamic_cast<Id*>(identifier);
-	Formals* f = dynamic_cast<Formals*>(identifier);
+	CAST_PTR(RetType, t, retType);
+	CAST_PTR(Id, iden, identifier);
+	CAST_PTR(Formals, f, formals);
 
-	symbolTable.insertFunction(t, iden, f);
+	symbolTable->insertFunction(t, iden, f);
 }
 
 void exitFunc() {

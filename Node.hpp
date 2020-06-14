@@ -117,7 +117,14 @@ public:
 //===========================FuncDecl================================
 class FuncDecl : public Node {
 public:
-    vector<string, TypeN> argTypes;
+    vector<std::pair<string, TypeN>> argTypes;
+    FuncDecl(string name, TypeN t, int num) : Node(name, t) {
+        if (num == 0) {
+            argTypes.push_back(std::pair<string,TypeN>("", TypeN::STRING));
+        } else {
+            argTypes.push_back(std::pair<string,TypeN>("", TypeN::INT));
+        }
+    }
     FuncDecl(RetType* pRetType, Formals* pFormals) : Node(pRetType->getType()), argTypes(pFormals->argTypes)
     {}
     FuncDecl(RetType* pRetType, Id* i, Formals* pFormals) : Node(i->getName(), pRetType->getType()), argTypes(pFormals->argTypes)
