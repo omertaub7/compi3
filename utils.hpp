@@ -10,6 +10,7 @@
 #include "Exceptions.hpp"
 #include "SymbolTable.hpp"
 #include "bp.hpp"
+#include "codeGenerationUtils.hpp"
 
 #include <iostream>
 #include <typeinfo>

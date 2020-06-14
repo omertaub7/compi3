@@ -11,7 +11,7 @@ vector<Node*> *globalPtrArr;
 int nestedWhileCounter = 0;
 
 GlobalSymbolTable* symbolTable;
-CodeBuffer codeBuffer;
+CodeBuffer& codeBuffer = CodeBuffer::instance();
 
 
 //==========================Utils=========================
@@ -289,6 +289,13 @@ Call* call(Node* pId, Node* pExpList) {
 		}
 	}
 	auto* p = new Call(getFuncType(id));
+	std::stringstream code;
+	code << "call ";
+	code << "void ";
+	code << "@printi ";
+	code << "(i32 %v0) ";
+	codeBuffer.emit(code.str());
+	//TODO: need to emit: call function.ret_type function.arg_types function.name function.arg_list
 	registerNode(p, id, expList);
 	return p;
 }
@@ -342,6 +349,8 @@ Statement* statementVarDeclInit(Node* pType, Node* pId, Node* pExp) {
 	insertNewVar(pType, pId);
 	auto* p = new Statement();
 	registerNode(p, pType, pId, pExp);
+	//TODO: replace with real value
+	codeBuffer.emit(newTemp() + " = add i32 0, 4");
 	return p;
 }
 
@@ -621,6 +630,8 @@ void exitFunc() {
 void init_global_prog() {
     codeBuffer.emit("declare i32 @printf(i8*,...)");
 	codeBuffer.emit("declare void @exit(i32)");
+	codeBuffer.emit("@.int_specifier = constant [4 x i8] c\"%d\\0A\\00\"");
+	codeBuffer.emit("@.str_specifier = constant [4 x i8] c\"%s\\0A\\00\"");
 	codeBuffer.emit("define void @printi(i32) {"); 
     codeBuffer.emit("call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4x i8]* @.int_specifier, i32 0, i32 0), i32 %0)");
     codeBuffer.emit("ret void");
@@ -633,7 +644,6 @@ void init_global_prog() {
 }
 
 void end_global_prog() {
-	codeBuffer.emit("end:");
 	codeBuffer.emit("ret i32 0");
 	codeBuffer.emit("}");
 	codeBuffer.printCodeBuffer();
