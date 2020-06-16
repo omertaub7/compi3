@@ -73,11 +73,18 @@ Num* getNum(const string& s);
 
 Id* getId(const string& s);
 
+StringNode* getStr(const string& s);
+
+BinOperator* getBinOp(BinOp o);
+
+RelOperator* getRelOp(const string& s);
+
+EqualOperator* getEqOp(const string& s);
 //=====================Exp Rules=====================================
 // Exp -> ( Exp )
 Exp* expFromExp(Node*);
 // Exp -> Exp BINOP Exp
-Exp* expFromBinop(Node*, Node*);
+Exp* expFromBinop(Node*, Node*, BinOp);
 // Exp -> ID
 Exp* expFromId(Node*);
 // Exp -> Call
@@ -87,17 +94,20 @@ Exp* expFromNum(Node*);
 // Exp -> NUM B
 Exp* expFromByte(Node*);
 // Exp -> STRING
-Exp* expFromString();
+Exp* expFromString(Node*);
 // Exp -> TRUE
 // Exp -> FALSE
-Exp* expFromBool();
+Exp* expFromBool(bool);
 // Exp -> NOT Exp
 Exp* expFromNot(Node*);
 // Exp -> Exp AND Exp
 // Exp -> Exp OR Exp
-Exp* expFromLogicop(Node*, Node*);
+Exp* expFromLogicop(Node*, Node*, LogicOp);
 // Exp -> Exp RELOP Exp
-Exp* expFromRelop(Node*, Node*);
+Exp* expFromRelop(Node* pExp1, Node* pExp2, Node* pExp3);
+// Exp -> Exp EQUALOP Exp
+Exp* expFromEqualOp(Node* pExp1, Node* pExp2, Node* pExp3);
+
 
 //======================== Type Rules =========================
 // Type -> int
@@ -209,3 +219,7 @@ void end_global_prog();
 
 
 
+//====================== Buffer printers ============================
+void emitBinOpCode(Exp* x, Exp* y, BinOp op);
+void emitFuncDef(RetType* type, Id* id, Formals* f);
+void emitFuncEnd(TypeN type);

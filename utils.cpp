@@ -127,6 +127,50 @@ Id* getId(const string& s) {
 	return p;
 }
 
+StringNode* getStr(const string& s) {
+	auto p = new StringNode(s);
+	registerNode(p);
+	return p;
+}
+
+BinOperator* getBinOp(BinOp o) {
+	auto p = new BinOperator(o);
+	registerNode(p);
+	return p;
+}
+
+RelOperator* getRelOp(const string& s) {
+	RelOp op;
+	//C++ strings are not fun to handle
+	if (s == "<") {
+		op = RelOp::LT;
+	} else if (s == ">") {
+		op = RelOp::GT;
+	} else if (s == "<=") {
+		op = RelOp::LEQ;
+	} else if (s == ">=") {
+		op = RelOp::GEQ;
+	} else {
+		assert(false);
+	}
+	auto p = new RelOperator(op);
+	registerNode(p);
+	return p;
+}
+
+EqualOperator* getEqOp(const string& s) {
+	EqOp op;
+	if (s == "==") {
+		op = EqOp::NEQ;
+	} else if (s == "!=") {
+		op = EqOp::EQ;
+	} else {
+		assert(false);
+	}
+	auto p = new EqualOperator(op);
+	registerNode(p);
+	return p;
+}
 //=====================Exp Rules=====================================
 Exp* expFromExp(Node* pExp) {
 	CAST_PTR(Exp, exp, pExp);
@@ -136,7 +180,21 @@ Exp* expFromExp(Node* pExp) {
 	return p;
 }
 
-Exp* expFromBinop(Node* pExp1, Node* pExp2) {
+static inline int valueFromBinOp (int x, int y, BinOp op) {
+	switch (op) {
+		case BinOp::PLUS:
+			return x+y;
+		case BinOp::MINUS:
+			return x-y;
+		case BinOp::MUL:
+			return x*y;
+		case BinOp::DIV:
+			//TODO: emit code handler to exit if y=0
+			return x/y;
+	}
+}
+
+Exp* expFromBinop(Node* pExp1, Node* pExp2, BinOp op) {
 	CAST_PTR(Exp, exp1, pExp1);
 	CAST_PTR(Exp, exp2, pExp2);
 
@@ -147,7 +205,8 @@ Exp* expFromBinop(Node* pExp1, Node* pExp2) {
 	if (exp1->getType() == TypeN::BYTE && exp2->getType() == TypeN::BYTE) {
 		type = TypeN::BYTE;
 	}
-	auto* p = new Exp(type);
+	emitBinOpCode(exp1, exp2, op);
+	auto* p = new Exp(type, valueFromBinOp(exp1->value, exp2->value, op));
 	registerNode(p, exp1, exp2);
 	return p; 
 }
@@ -170,7 +229,7 @@ Exp* expFromCall(Node* pCall) {
 
 Exp* expFromNum(Node* pNum) {
 	CAST_PTR(Num, num, pNum);
-	auto* p = new Exp(TypeN::INT);
+	auto* p = new Exp(TypeN::INT,num->value);
 	registerNode(p, num);
 	return p;
 }
@@ -181,19 +240,20 @@ Exp* expFromByte(Node* pNum) {
 	if (!isByte(num)) {
 		throw errorByteTooLargeException(to_string(num->value));
 	}
-	auto* p = new Exp(TypeN::BYTE);
+	auto* p = new Exp(TypeN::BYTE, num->value);
 	registerNode(p, num);
 	return p;
 }
 
-Exp* expFromString() {
-	auto* p = new Exp(TypeN::STRING);
+Exp* expFromString(Node* string) {
+	CAST_PTR(StringNode, exp, string);
+	auto* p = new Exp(TypeN::STRING, exp->s_value);
 	registerNode(p);
 	return p;
 }
 
-Exp* expFromBool() {
-	auto* p = new Exp(TypeN::BOOL);
+Exp* expFromBool(bool flag) {
+	auto* p = new Exp(TypeN::BOOL, flag);
 	registerNode(p);
 	return p;
 }
@@ -204,34 +264,84 @@ Exp* expFromNot(Node* pExp) {
 	if (!isBool(exp)) {
 		throw errorMismatchException();
 	}
-	auto* p = new Exp(TypeN::BOOL);
+	auto* p = new Exp(TypeN::BOOL, !exp->b_value);
 	registerNode(p, exp);
 	return p;
 }
 
-Exp* expFromLogicop(Node* pExp1, Node* pExp2) {
+Exp* expFromLogicop(Node* pExp1, Node* pExp2, LogicOp op) {
 	CAST_PTR(Exp, exp1, pExp1);
 	CAST_PTR(Exp, exp2, pExp2);
 
 	if (!(isBool(exp1) && isBool(exp2))) {
 		throw errorMismatchException();
 	}
-	auto* p = new Exp(TypeN::BOOL);
+	bool flag = false;
+	switch (op) {
+		case LogicOp::AND:
+			flag = exp1->b_value && exp2->b_value;
+			break;
+		case LogicOp::OR:
+			flag = exp1->b_value || exp2->b_value;
+			break;
+		default:
+			assert(false); //Should not get here
+	}
+	auto* p = new Exp(TypeN::BOOL, flag);
 	registerNode(p, exp1, exp2);
 	return p;
 }
 
-Exp* expFromRelop(Node* pExp1, Node* pExp2) {
-	CAST_PTR(Exp, exp1, pExp1);
-	CAST_PTR(Exp, exp2, pExp2);
+static inline bool compareByRelOp(int x, int y, RelOp op) {
+	switch (op) {
+		case RelOp::GT:
+			return x>y;
+		case RelOp::LT:
+			return x<y;
+		case RelOp::GEQ:
+			return x>=y;
+		case RelOp::LEQ:
+			return x<=y;
+		default:
+			assert(false);
+	}
+}
 
-	if (!(isNumeric(exp1) && isNumeric(exp2))) {
+Exp* expFromRelop(Node* pExp1, Node* pExp2, Node* pExp3) {
+	CAST_PTR(Exp, exp1, pExp1);
+	CAST_PTR(Exp, exp3, pExp3);
+	CAST_PTR(RelOperator, exp2, pExp2)
+	if (!(isNumeric(exp1) && isNumeric(exp3))) {
 		throw errorMismatchException();
 	}
-	auto* p = new Exp(TypeN::BOOL);
+	auto* p = new Exp(TypeN::BOOL, compareByRelOp(exp1->value, exp3->value, exp2->op));
 	registerNode(p, exp1, exp2);
 	return p;
 }
+
+static inline bool compareByEqOp(int x, int y, EqOp op) {
+	switch (op) {
+		case EqOp::EQ:
+			return x==y;
+		case EqOp::NEQ:
+			return x!=y;
+		default:
+			assert(false);
+	}
+}
+
+Exp* expFromEqualOp(Node* pExp1, Node* pExp2, Node* pExp3) {
+	CAST_PTR(Exp, exp1, pExp1);
+	CAST_PTR(Exp, exp3, pExp3);
+	CAST_PTR(EqualOperator, exp2, pExp2)
+	if (!(isNumeric(exp1) && isNumeric(exp3))) {
+		throw errorMismatchException();
+	}
+	auto* p = new Exp(TypeN::BOOL, compareByEqOp(exp1->value, exp3->value, exp2->op));
+	registerNode(p, exp1, exp2);
+	return p;
+}
+
 
 //======================== Type Rules =========================
 Type* typeInt() {
@@ -512,7 +622,7 @@ FuncDecl* funcDecl(Node* pRetType, Node* pId, Node* pFormals, Node* pStatements)
 	assert(checkPtr<Formals>(pFormals));
 	assert(pStatements);
 	assert(checkPtr<Statements>(pStatements));
-
+	emitFuncEnd(pRetType->getType());
 	auto* p = new FuncDecl((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
 	registerNode(p, pRetType, pId, pFormals, pStatements);
 	return p;
@@ -620,6 +730,7 @@ void addFunc(Node* retType, Node* identifier, Node* formals) {
 	CAST_PTR(Formals, f, formals);
 
 	symbolTable->insertFunction(t, iden, f);
+	emitFuncDef(t, iden, f);
 }
 
 void exitFunc() {
@@ -640,11 +751,74 @@ void init_global_prog() {
  	codeBuffer.emit("call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4x i8]* @.str_specifier, i32 0, i32 0), i8* %0)");
 	codeBuffer.emit("ret void");
     codeBuffer.emit("}");
-    codeBuffer.emit("define i32 @main() {");
 }
 
 void end_global_prog() {
-	codeBuffer.emit("ret i32 0");
-	codeBuffer.emit("}");
 	codeBuffer.printCodeBuffer();
+}
+
+//====================== Buffer printers ============================
+void emitBinOpCode(Exp* x, Exp* y, BinOp op) {
+	return;
+	//TODO This
+/*
+	bool is_byte = x->getType() == TypeN::BYTE && y->getType() == TypeN::BYTE;
+	string op_type = is_byte?"i8":"i32",
+	exp_1 = x->getName();
+	exp_1 = 
+	switch (op) {
+		case BinOp::PLUS:
+			codeBuffer.emit("add" + op_type + exp_1 + " , " + exp_2);
+			break;
+		case BinOp::MINUS:
+			codeBuffer.emit("sub" + op_type + exp_1 + " , " + exp_2);
+			break;
+		case BinOp::MUL:
+			codeBuffer.emit("mul" + op_type + exp_1 + " , " + exp_2);
+			break;
+		case BinOp::DIV:
+			//
+			break;
+		default:
+			assert(false);
+	}
+	*/
+}
+
+static inline string to_llvm_retType(TypeN type) {
+	switch (type) {
+		case TypeN::INT:
+			return "i32 ";
+		case TypeN::BYTE:
+			return "i8 ";
+		case TypeN::VOID:
+			return "void ";
+		case TypeN::BOOL:
+			return "i1 ";
+	}
+}
+
+void emitFuncDef(RetType* type, Id* id, Formals* f) {
+	//print function defenition
+	std::stringstream code;
+	code << "define ";
+	code << to_llvm_retType(type->getType());
+	code << "@";
+	code << id->getName();
+	code << "(";
+	for (auto p : f->argTypes) {
+		code << to_llvm_retType(p.second);
+	}
+	code << ") ";
+	code << "{";
+	codeBuffer.emit(code.str());
+	//allocate local stack
+	codeBuffer.emit(newStack() + " = alloca [50 x i32]");
+}
+
+void emitFuncEnd(TypeN type) {
+	if (type == TypeN::VOID) {
+		codeBuffer.emit("ret void");
+	}
+	codeBuffer.emit("}");
 }

@@ -15,7 +15,10 @@ using std::to_string;
 
 // scoped enum, to not interfere with the tokens
 enum class TypeN { VOID, BOOL, INT, BYTE, STRING };
-
+enum class LogicOp { AND, OR};
+enum class RelOp { LT, LEQ, GT, GEQ}; // <, >, >=, <=
+enum class EqOp {EQ, NEQ};// ==, !=
+enum class BinOp {PLUS, MINUS, MUL, DIV}; // +,-,*,/
 ostream& operator<<(ostream&, TypeN);
 string to_string(TypeN);
 
@@ -48,6 +51,32 @@ public:
     Num(const string& s) : value(stoi(s)) {}
 };
 
+//==========================String=======================================
+class StringNode : public Node {
+    public:
+    string s_value;
+    StringNode(const string& s) : s_value(s) {}
+};
+
+//==========================Operators=======================================
+class BinOperator : public Node {
+    public:
+    BinOp op;
+    BinOperator(BinOp o) : op(o) {}
+};
+
+class RelOperator : public Node {
+    public:
+    RelOp op;
+    RelOperator(RelOp o) : op(o) {}
+};
+
+class EqualOperator : public Node {
+    public:
+    EqOp op;
+    EqualOperator(EqOp o) : op(o) {}
+};
+
 //===========================ID===========================================
 class Id : public Node {
 public:
@@ -57,7 +86,14 @@ public:
 // ========================= Exp ========================================
 class Exp: public Node {
 public:
-    Exp(TypeN type) : Node(type) {}
+    int value;
+    string s_value;
+    bool b_value;
+    string storage_reg;
+    Exp(TypeN type) : Node(type) {storage_reg = "";}
+    Exp(TypeN type, int value) : Node (type), value(value) { s_value = ""; b_value = false; storage_reg = "";}
+    Exp(TypeN type, string s) : Node(type), s_value(s) {value = 0; b_value = false; storage_reg = "";}
+    Exp(TypeN type, bool flag) : Node(type), b_value(flag) {value = 0; s_value = ""; storage_reg = "";}
 };
 
 //========================== Type =======================================

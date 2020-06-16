@@ -4,7 +4,7 @@
 #include <string>
 using namespace std;
 
+
 string newTemp();
-
-
+string newStack();
 #endif

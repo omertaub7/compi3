@@ -36,15 +36,15 @@ continue                    	{return CONTINUE;}
 \{                          	{return LBRACE;}
 \}                          	{return RBRACE;}
 =                           	{return ASSIGN;}
-(==|!=)                         {return EQUALOP;}
-(<|>|<=|>=)                    	{return RELOP;}
-\+                              {return PLUS;}
--                               {return MINUS;}
-\*                              {return MUL;}
-\/                         	 	{return DIV;}
+(==|!=)                         {yylval = getEqOp(yytext); return EQUALOP;}
+(<|>|<=|>=)                    	{yylval = getRelOp(yytext); return RELOP;}
+\+                              {yylval = getBinOp(BinOp::PLUS); return PLUS;}
+-                               {yylval = getBinOp(BinOp::MINUS); return MINUS;}
+\*                              {yylval = getBinOp(BinOp::MUL); return MUL;}
+\/                         	 	{yylval = getBinOp(BinOp::DIV); return DIV;}
 [a-zA-Z][a-zA-Z0-9]*        	{yylval = getId(yytext); return ID;}
 0|[1-9][0-9]*               	{yylval = getNum(yytext); return NUM;}
-\"([^\n\r\"\\]|\\[rnt"\\])+\" 	{return STRING;}
+\"([^\n\r\"\\]|\\[rnt"\\])+\" 	{yylval = getStr(yytext); return STRING;}
 [\t\n\r ]                   	; 
 \/\/[^\r\n]*[\r|\n|\r\n]?     	;
 .                           	{throw lexException();}
