@@ -11,7 +11,7 @@ string newTemp() {
 }
 
 string newStack() {
-    return ("%s" + std::to_string(global_stack_counter++));
+    return ("%s" + std::to_string(++global_stack_counter));
 }
 
 string getCurrentStack() {

@@ -89,11 +89,11 @@ public:
     int value;
     string s_value;
     bool b_value;
-    string storage_reg;
-    Exp(TypeN type) : Node(type) {storage_reg = "";}
-    Exp(TypeN type, int value) : Node (type), value(value) { s_value = ""; b_value = false; storage_reg = "";}
-    Exp(TypeN type, string s) : Node(type), s_value(s) {value = 0; b_value = false; storage_reg = "";}
-    Exp(TypeN type, bool flag) : Node(type), b_value(flag) {value = 0; s_value = ""; storage_reg = "";}
+    Exp(string name, TypeN type) : Node(name, type) {s_value = ""; b_value = false; value=0;}
+    Exp(TypeN type) : Node(type) {}
+    Exp(TypeN type, int value) : Node (type), value(value) {s_value = ""; b_value = false;}
+    Exp(TypeN type, string s) : Node(type), s_value(s) {value = 0; b_value = false;}
+    Exp(TypeN type, bool flag) : Node(type), b_value(flag) {value = 0; s_value = "";}
 };
 
 //========================== Type =======================================

@@ -213,7 +213,7 @@ Exp* expFromBinop(Node* pExp1, Node* pExp2, BinOp op) {
 Exp* expFromId(Node* pId) {
 	CAST_PTR(Id, id, pId);
 
-	auto* p = new Exp(getIdType(id));
+	auto* p = new Exp(pId->getName(), getIdType(id));
 	registerNode(p, id);
 	return p;
 }
@@ -834,8 +834,61 @@ void emitFuncEnd(TypeN type) {
 	codeBuffer.emit("}");
 }
 
+string getExpressionValueString(Node* pExp) {
+	std::stringstream value_string;
+	CAST_PTR(Exp, exp, pExp);
+	value_string << std::to_string(exp->value);
+	return value_string.str();
+}
+
+
+//Input: local varible offset in stack
+//Output: a register holding address
+string getLocalVarAddress(int offset) {
+	std::stringstream get_effective_address;
+	if (offset < 0) {
+		//LLVM Function arguments are numbered %0, %1, ...
+		//Symbol Table function arguments are numbered -1, -2 ...
+		get_effective_address << "%";
+		get_effective_address << std::to_string((-1) - offset);
+		return get_effective_address.str();
+	}
+	string stack = getCurrentStack();
+	string store_address = newTemp();
+	get_effective_address << store_address;
+	get_effective_address << " = getelementptr [50 x i32], [50 x i32]* ";
+	get_effective_address << stack;
+	get_effective_address << ", i32 0, i32 ";
+	get_effective_address << std::to_string(offset);
+	codeBuffer.emit(get_effective_address.str());
+	return store_address;
+}
+
+string loadValueToReg (string address_reg) {
+	std::stringstream load_statement;
+	string value_reg = newTemp();
+	load_statement << value_reg;
+	load_statement << " = load i32, i32* ";
+	load_statement << address_reg;
+	codeBuffer.emit(load_statement.str());
+	return value_reg;
+}
 void emitNewVarDeclInit (int offset, Node* exp) {
-	std::stringstream code;
+	string store_address = getLocalVarAddress(offset);
+
+	std::stringstream assign_value_to_reg;
+	string value_temp = newTemp();
+	assign_value_to_reg << value_temp;
+	assign_value_to_reg << " = add i32 0, ";
+	assign_value_to_reg << getExpressionValueString(exp);
+	codeBuffer.emit(assign_value_to_reg.str());
+	
+	std::stringstream store_at_affective_address;
+	store_at_affective_address << "store i32 ";
+	store_at_affective_address << value_temp;
+	store_at_affective_address << ", i32* ";
+	store_at_affective_address << store_address;
+	codeBuffer.emit(store_at_affective_address.str());
 
 }
 
@@ -854,24 +907,44 @@ void emitGlobalString(string value) {
 
 void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args) {
 	std::stringstream code;
+	std::stringstream args_list;
 	code << "call ";
 	code << to_llvm_retType(retType);
 	code << "@";
 	code << id;
 	code << " (";
-	for (auto p : recieved_args) {
+	bool skip_comma = true;
+	for (Exp* p : recieved_args) {
+		if (!skip_comma) {
+			args_list << ", ";
+		}
 		if (p->getType() == TypeN::STRING) {
 			//Single argument - pointer to global string varible
 			int size = (p->s_value).length() - 1;
-			code << "i8* getelementptr([";
-			code << std::to_string(size);
-			code << " x i8], [";
-			code << std::to_string(size);
-			code << " x i8]* ";
-			code << get_global_string(p->s_value);
-			code << ", i32 0, i32 0)";
+			args_list << "i8* getelementptr([";
+			args_list << std::to_string(size);
+			args_list << " x i8], [";
+			args_list << std::to_string(size);
+			args_list << " x i8]* ";
+			args_list << get_global_string(p->s_value);
+			args_list << ", i32 0, i32 0)";
 		}
+		if (p->getType() == TypeN::INT) {
+			string varible_reg;
+			if (p->getName() =="") {
+				//Clean valued epxression
+				varible_reg = std::to_string(p->value);
+			} else {
+				string address_reg = getLocalVarAddress(symbolTable->getVaribleOffset(p->getName()));
+				varible_reg = loadValueToReg(address_reg);
+			}
+			args_list << "i32 ";
+			args_list << varible_reg;
+
+		}
+		skip_comma = false;
 	}
+	code << args_list.str();
 	code << ")";
 	codeBuffer.emit(code.str());
 }
