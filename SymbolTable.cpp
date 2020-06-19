@@ -147,3 +147,14 @@ TypeN GlobalSymbolTable::getFuncRetType(string name) {
     }
     throw errorUndefFuncException(name);
 }
+
+int GlobalSymbolTable::getVaribleOffset(string name) {
+        //Go on all varibles in avaliable Scopes
+    for (const Scope& s : scope_stack) { //all scopes loop
+        for (const VarOffset& p : s) { //Current scope loop
+            if ((p.first).getName() == name) {
+                return (p.second);
+            }
+        }
+    }   
+}

@@ -9,12 +9,12 @@
 #include "hw3_output.hpp"
 #include "Exceptions.hpp"
 #include "SymbolTable.hpp"
-#include "bp.hpp"
 #include "codeGenerationUtils.hpp"
 
 #include <iostream>
 #include <typeinfo>
 #include <cassert>
+#include <algorithm>
 
 using std::exception;
 using std::cout;
@@ -215,7 +215,6 @@ void addFunc(Node* retType, Node* ID, Node* Formals);
 //====================== LLVM Code handlers ============================
 void init_global_prog();
 void end_global_prog();
-#endif // !_UTILS
 
 
 
@@ -223,3 +222,9 @@ void end_global_prog();
 void emitBinOpCode(Exp* x, Exp* y, BinOp op);
 void emitFuncDef(RetType* type, Id* id, Formals* f);
 void emitFuncEnd(TypeN type);
+void emitNewVarDeclInit(int offset, Node* pExp);
+void emitGlobalString(string value);
+void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args);
+
+
+#endif // !_UTILS

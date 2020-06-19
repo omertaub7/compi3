@@ -13,7 +13,6 @@ int nestedWhileCounter = 0;
 GlobalSymbolTable* symbolTable;
 CodeBuffer& codeBuffer = CodeBuffer::instance();
 
-
 //==========================Utils=========================
 TypeN getIdType(Node* id) {
 	return symbolTable->getSymbolType(id);
@@ -248,6 +247,8 @@ Exp* expFromByte(Node* pNum) {
 Exp* expFromString(Node* string) {
 	CAST_PTR(StringNode, exp, string);
 	auto* p = new Exp(TypeN::STRING, exp->s_value);
+	add_global_string(exp->s_value);
+	emitGlobalString(exp->s_value);
 	registerNode(p);
 	return p;
 }
@@ -399,12 +400,7 @@ Call* call(Node* pId, Node* pExpList) {
 		}
 	}
 	auto* p = new Call(getFuncType(id));
-	std::stringstream code;
-	code << "call ";
-	code << "void ";
-	code << "@printi ";
-	code << "(i32 %v0) ";
-	codeBuffer.emit(code.str());
+	emitFunctionCall(getFuncType(id), id->getName(), recievedExpressions);
 	//TODO: need to emit: call function.ret_type function.arg_types function.name function.arg_list
 	registerNode(p, id, expList);
 	return p;
@@ -442,6 +438,7 @@ Statement* statementVarDecl(Node* pType, Node* pId) {
 	insertNewVar(pType, pId);
 	auto* p = new Statement();
 	registerNode(p, pType, pId);
+
 	return p;
 }
 
@@ -459,8 +456,7 @@ Statement* statementVarDeclInit(Node* pType, Node* pId, Node* pExp) {
 	insertNewVar(pType, pId);
 	auto* p = new Statement();
 	registerNode(p, pType, pId, pExp);
-	//TODO: replace with real value
-	codeBuffer.emit(newTemp() + " = add i32 0, 4");
+	emitNewVarDeclInit(symbolTable->getVaribleOffset(pId->getName()), pExp);
 	return p;
 }
 
@@ -741,8 +737,8 @@ void exitFunc() {
 void init_global_prog() {
     codeBuffer.emit("declare i32 @printf(i8*,...)");
 	codeBuffer.emit("declare void @exit(i32)");
-	codeBuffer.emit("@.int_specifier = constant [4 x i8] c\"%d\\0A\\00\"");
 	codeBuffer.emit("@.str_specifier = constant [4 x i8] c\"%s\\0A\\00\"");
+	codeBuffer.emit("@.int_specifier = constant [4 x i8] c\"%d\\0A\\00\"");
 	codeBuffer.emit("define void @printi(i32) {"); 
     codeBuffer.emit("call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4x i8]* @.int_specifier, i32 0, i32 0), i32 %0)");
     codeBuffer.emit("ret void");
@@ -754,13 +750,13 @@ void init_global_prog() {
 }
 
 void end_global_prog() {
+	codeBuffer.printGlobalBuffer();
 	codeBuffer.printCodeBuffer();
 }
 
 //====================== Buffer printers ============================
 void emitBinOpCode(Exp* x, Exp* y, BinOp op) {
 	return;
-	//TODO This
 /*
 	bool is_byte = x->getType() == TypeN::BYTE && y->getType() == TypeN::BYTE;
 	string op_type = is_byte?"i8":"i32",
@@ -817,8 +813,66 @@ void emitFuncDef(RetType* type, Id* id, Formals* f) {
 }
 
 void emitFuncEnd(TypeN type) {
-	if (type == TypeN::VOID) {
-		codeBuffer.emit("ret void");
+	//TODO: return the correct value
+	//For now ret void to be able to run
+	switch (type) {
+		case TypeN::VOID:
+			codeBuffer.emit("ret void");
+			break;
+		case TypeN::INT:
+			codeBuffer.emit("ret i32 0");
+			break;
+		case TypeN::BYTE:
+			codeBuffer.emit("ret i8 0");
+			break;
+		case TypeN::BOOL:
+			codeBuffer.emit("ret i1 0");
+			break;
+		default:
+			assert(false);
 	}
 	codeBuffer.emit("}");
 }
+
+void emitNewVarDeclInit (int offset, Node* exp) {
+	std::stringstream code;
+
+}
+
+void emitGlobalString(string value) {
+	std::stringstream code;
+	code << get_global_string(value);
+	code << " = constant [";
+    code << std::to_string(value.length()-1);
+    code << " x i8] c\"";
+	value.erase(std::remove(value .begin(), value .end(), '"'), value .end());
+    code << value;
+	code << "\\00\"";
+    //code << "\\0A\\00\"";
+    codeBuffer.emitGlobal(code.str());
+}
+
+void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args) {
+	std::stringstream code;
+	code << "call ";
+	code << to_llvm_retType(retType);
+	code << "@";
+	code << id;
+	code << " (";
+	for (auto p : recieved_args) {
+		if (p->getType() == TypeN::STRING) {
+			//Single argument - pointer to global string varible
+			int size = (p->s_value).length() - 1;
+			code << "i8* getelementptr([";
+			code << std::to_string(size);
+			code << " x i8], [";
+			code << std::to_string(size);
+			code << " x i8]* ";
+			code << get_global_string(p->s_value);
+			code << ", i32 0, i32 0)";
+		}
+	}
+	code << ")";
+	codeBuffer.emit(code.str());
+}
+	

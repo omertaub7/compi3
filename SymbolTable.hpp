@@ -46,6 +46,8 @@ public:
     TypeN getFuncRetType(string name);
     TypeN getCurrentReturnType();
     void setCurrentReturnType(TypeN t);
+
+    int getVaribleOffset(string name);
 };
 
 #endif

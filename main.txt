@@ -1,6 +1,10 @@
+int square (int x) {
+    return x*x;
+}
+
 void main () {
     int x = 5;
-    printi(x);
+    print("Hello world");
 }
 
 
