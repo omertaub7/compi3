@@ -1,7 +1,17 @@
 void main () {
-    int x = 5;
-    int y = 1546;
-    printi(y);
+    int x = 10;
+    int y = 15;
+
+    if (x > y)
+        int z = 20;
+    int w = 30;
+    if (w > x)
+        print("GOOD");
+    if (x > y)
+        print("BAD");
+    if (w == w)
+        print("GOOD");
+    if (x != 10)
+        print("BAD");
+    return;
 }
-
-

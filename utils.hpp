@@ -67,19 +67,19 @@ void endCompilation();
 // convert a type vector to string vector
 vector<string> typeVecToStringVec(const vector<std::pair<string,TypeN>> typeVec);
 void initGlobalVars();
-
+// emits 'getelementptr' to stack and returns a temporary variable holding the address of the variable
+string getVarPtr(Id* id);
+string getVarPtr(int offset);
 // ====================scanner======================================
 Num* getNum(const string& s);
 
 Id* getId(const string& s);
 
-StringNode* getStr(const string& s);
+String* getStr(const string& s);
 
 BinOperator* getBinOp(BinOp o);
 
 RelOperator* getRelOp(const string& s);
-
-EqualOperator* getEqOp(const string& s);
 //=====================Exp Rules=====================================
 // Exp -> ( Exp )
 Exp* expFromExp(Node*);
@@ -102,11 +102,9 @@ Exp* expFromBool(bool);
 Exp* expFromNot(Node*);
 // Exp -> Exp AND Exp
 // Exp -> Exp OR Exp
-Exp* expFromLogicop(Node*, Node*, LogicOp);
+Exp* expFromLogicop(Node*, Node*, Node*, LogicOp);
 // Exp -> Exp RELOP Exp
 Exp* expFromRelop(Node* pExp1, Node* pExp2, Node* pExp3);
-// Exp -> Exp EQUALOP Exp
-Exp* expFromEqualOp(Node* pExp1, Node* pExp2, Node* pExp3);
 
 
 //======================== Type Rules =========================
@@ -149,7 +147,8 @@ Statement* statementReturn(Node* pExp);
 Statement* statementIfElse(Node* pExp, Node* pStatement1, Node* pStatement2);
 // Statement -> IF ( Exp ) Statement
 // Statement -> WHILE ( Exp ) Statement
-Statement* statementIf(Node* pExp, Node* pStatement);
+Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN);
+Statement* statementWhile(Node* pExp, Node* pStatement);
 // Statement -> BREAK ;
 Statement* statementBreak();
 // Statement -> CONTINUE ;
@@ -198,6 +197,10 @@ FormalsList* formalsListRightRec(Node* pFormalDecl, Node* pFormalsList);
 // FormalDecl -> Type ID
 FormalDecl* formalDecl(Node* pType, Node* pId);
 
+//========================= Markers ==============================
+M* m();
+N* n();
+
 //====================== nested loops ============================
 void enterWhile();
 void exitWhile();
@@ -216,14 +219,9 @@ void addFunc(Node* retType, Node* ID, Node* Formals);
 void init_global_prog();
 void end_global_prog();
 
-
-
 //====================== Buffer printers ============================
-void emitBinOpCode(Exp* x, Exp* y, BinOp op);
 void emitFuncDef(RetType* type, Id* id, Formals* f);
 void emitFuncEnd(TypeN type);
-void emitNewVarDeclInit(int offset, Node* pExp);
-void emitGlobalString(string value);
 void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args);
 
 

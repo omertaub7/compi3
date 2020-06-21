@@ -36,7 +36,7 @@ continue                    	{return CONTINUE;}
 \{                          	{return LBRACE;}
 \}                          	{return RBRACE;}
 =                           	{return ASSIGN;}
-(==|!=)                         {yylval = getEqOp(yytext); return EQUALOP;}
+(==|!=)                         {yylval = getRelOp(yytext); return EQUALOP;}
 (<|>|<=|>=)                    	{yylval = getRelOp(yytext); return RELOP;}
 \+                              {yylval = getBinOp(BinOp::PLUS); return PLUS;}
 -                               {yylval = getBinOp(BinOp::MINUS); return MINUS;}

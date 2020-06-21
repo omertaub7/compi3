@@ -8,3 +8,10 @@ exp/*
 hw3
 tests*
 fake_main.cpp
+
+Debug/*
+*.sln
+*.vcxproj*
+machine_code.llvm
+.vs/*
+fake_maincpp.cpp

@@ -86,13 +86,13 @@ Statement:		LBRACE EnterScope Statements ExitScope RBRACE {$$ = statementList($3
 			|	Call SC {$$ = statementCall($1);}
 			|	RETURN SC {$$ = statementReturn();}
 			|	RETURN Exp SC {$$ = statementReturn($2);}
-			|	IF LPAREN Exp RPAREN EnterScope Statement ExitScope ELSE EnterScope Statement ExitScope
-				{$$ = statementIfElse($3, $6, $10);}
-			|	IF LPAREN Exp RPAREN EnterScope Statement ExitScope {$$ = statementIf($3, $6);}
-			|	WHILE LPAREN Exp RPAREN EnterWhile EnterScope Statement ExitScope ExitWhile ELSE EnterScope Statement ExitScope 
-				{$$ = statementIfElse($3, $7, $12);}
-			|   WHILE LPAREN Exp RPAREN EnterWhile EnterScope Statement ExitScope ExitWhile
-				{$$ = statementIf($3, $7);}
+			|	IF LPAREN Exp RPAREN EnterScope M Statement N ExitScope ELSE EnterScope M Statement ExitScope
+				{$$ = statementIfElse($3, $7, $13);}
+			|	IF LPAREN Exp RPAREN EnterScope M Statement N ExitScope {$$ = statementIf($3, $6, $7, $8);}
+			|	WHILE LPAREN Exp RPAREN EnterWhile EnterScope M Statement N ExitScope ExitWhile ELSE EnterScope M Statement ExitScope 
+				{$$ = statementIfElse($3, $8, $15);}
+			|   WHILE LPAREN Exp RPAREN EnterWhile EnterScope M Statement N ExitScope ExitWhile
+				{$$ = statementWhile($3, $8);}
 			|	BREAK SC {$$ = statementBreak();}
 			|	CONTINUE SC {$$ = statementContinue();}
 ;
@@ -119,11 +119,19 @@ Exp:			LPAREN Exp RPAREN {$$ = expFromExp($2);}
 			|	TRUE {$$ = expFromBool(true);}
 			|	FALSE {$$ = expFromBool(false);}
 			|	NOT Exp {$$ = expFromNot($2);}
-			|	Exp AND Exp {$$ = expFromLogicop($1, $3, LogicOp::AND);}
-			|	Exp OR Exp {$$ = expFromLogicop($1, $3, LogicOp::OR);}
+			|	Exp AND M Exp {$$ = expFromLogicop($1, $3, $4, LogicOp::AND);}
+			|	Exp OR M Exp {$$ = expFromLogicop($1, $3, $4, LogicOp::OR);}
 			|	Exp RELOP Exp {$$ = expFromRelop($1, $2, $3);}
-			|	Exp EQUALOP Exp {$$ = expFromEqualOp($1, $2, $3);}
+			|	Exp EQUALOP Exp {$$ = expFromRelop($1, $2, $3);}
 ;
+N:			/*epsilon*/ {$$ = n();}
+;
+
+M:			/*epsilon*/ {$$ = m();}
+;
+
+
+
 EnterWhile:	 /*epsilon*/ {enterWhile();}
 ;
 ExitWhile:	 /*epsilon*/ {exitWhile();}

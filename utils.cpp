@@ -1,10 +1,10 @@
 #include "utils.hpp"
+// TODO: do we even have to keep the hierarchy of the Nodes?
 
 // for casting and testing for exact linenumber in assert
 #define CAST_PTR(T, p_dst, p_src) assert((p_src));\
 								  T *p_dst = dynamic_cast<T*>((p_src));\
 								  assert((p_dst));
-	
 
 //======================= global variables ===============
 vector<Node*> *globalPtrArr;
@@ -114,6 +114,23 @@ void initGlobalVars() {
 	globalPtrArr = new vector<Node*>();
 	symbolTable = new GlobalSymbolTable();
 }
+
+string getVarPtr(Id* id) {
+	assert(id);
+	int offset = symbolTable->getVaribleOffset(id->getName());
+	return getVarPtr(offset);
+}
+
+string getVarPtr(int offset) {
+	// TODO: what if we want to assign value to one of the arguments?
+	// in c it is allowd...
+	assert(offset >= 0);	// not argument
+	stringstream get_ptr_code;
+	string ptr = newTemp();
+	get_ptr_code << ptr << " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " << offset;
+	codeBuffer.emit(get_ptr_code.str());
+	return ptr;
+}
 // ====================scanner======================================
 Num* getNum(const string& s) {
 	auto p = new Num(s);
@@ -126,8 +143,8 @@ Id* getId(const string& s) {
 	return p;
 }
 
-StringNode* getStr(const string& s) {
-	auto p = new StringNode(s);
+String* getStr(const string& s) {
+	auto p = new String(s);
 	registerNode(p);
 	return p;
 }
@@ -140,16 +157,25 @@ BinOperator* getBinOp(BinOp o) {
 
 RelOperator* getRelOp(const string& s) {
 	RelOp op;
-	//C++ strings are not fun to handle
 	if (s == "<") {
 		op = RelOp::LT;
-	} else if (s == ">") {
+	}
+	else if (s == ">") {
 		op = RelOp::GT;
-	} else if (s == "<=") {
+	}
+	else if (s == "<=") {
 		op = RelOp::LEQ;
-	} else if (s == ">=") {
+	}
+	else if (s == ">=") {
 		op = RelOp::GEQ;
-	} else {
+	}
+	else if (s == "==") {
+		op = RelOp::EQ;
+	}
+	else if (s == "!=") {
+		op = RelOp::NEQ;
+	}
+	else {
 		assert(false);
 	}
 	auto p = new RelOperator(op);
@@ -157,40 +183,13 @@ RelOperator* getRelOp(const string& s) {
 	return p;
 }
 
-EqualOperator* getEqOp(const string& s) {
-	EqOp op;
-	if (s == "==") {
-		op = EqOp::NEQ;
-	} else if (s == "!=") {
-		op = EqOp::EQ;
-	} else {
-		assert(false);
-	}
-	auto p = new EqualOperator(op);
-	registerNode(p);
-	return p;
-}
 //=====================Exp Rules=====================================
 Exp* expFromExp(Node* pExp) {
 	CAST_PTR(Exp, exp, pExp);
-	
-	auto* p = new Exp(exp->getType());
+	auto* p = new Exp(*exp);
 	registerNode(p, exp);
-	return p;
-}
 
-static inline int valueFromBinOp (int x, int y, BinOp op) {
-	switch (op) {
-		case BinOp::PLUS:
-			return x+y;
-		case BinOp::MINUS:
-			return x-y;
-		case BinOp::MUL:
-			return x*y;
-		case BinOp::DIV:
-			//TODO: emit code handler to exit if y=0
-			return x/y;
-	}
+	return p;
 }
 
 Exp* expFromBinop(Node* pExp1, Node* pExp2, BinOp op) {
@@ -204,23 +203,75 @@ Exp* expFromBinop(Node* pExp1, Node* pExp2, BinOp op) {
 	if (exp1->getType() == TypeN::BYTE && exp2->getType() == TypeN::BYTE) {
 		type = TypeN::BYTE;
 	}
-	emitBinOpCode(exp1, exp2, op);
-	auto* p = new Exp(type, valueFromBinOp(exp1->value, exp2->value, op));
+
+	auto* p = new Exp(type, newTemp());
 	registerNode(p, exp1, exp2);
+
+	string opcode;
+	switch (op)
+	{
+	case BinOp::PLUS:	opcode = "add"; break;
+	case BinOp::MINUS:	opcode = "sub"; break;
+	case BinOp::MUL:	opcode = "mul"; break;
+	case BinOp::DIV:	opcode = "sdiv"; break;
+	}
+
+	if (type == TypeN::INT) {
+		stringstream code;
+		code << p->place << " = " << opcode << " i32 " << exp1->place << ", " << exp2->place;
+		codeBuffer.emit(code.str());
+	}
+	// deal with overflow in the case of byte
+	else {
+		string temp = newTemp();
+		stringstream temp_code;
+		temp_code << temp << " = " << opcode << " i32 " << exp1->place << ", " << exp2->place;
+		stringstream code;
+		// clear the upper bits
+		code << p->place << " = and i32 255, " << temp;		
+		codeBuffer.emit(temp_code.str());
+		codeBuffer.emit(code.str());
+	}
 	return p; 
 }
 
 Exp* expFromId(Node* pId) {
 	CAST_PTR(Id, id, pId);
 
-	auto* p = new Exp(pId->getName(), getIdType(id));
+	TypeN type = getIdType(id);
+	int offset = symbolTable->getVaribleOffset(id->getName());
+	string place;
+	// in function arguments
+	if (offset < 0) {
+		int arg_number = (offset * -1) - 1;
+		place = "%";
+		place += to_string(arg_number);
+	}
+	// in stack
+	else {
+		place = newTemp();
+		string ptr = getVarPtr(offset);
+		stringstream load_code;
+		load_code << place << " = load i32, i32* " << ptr;
+		codeBuffer.emit(load_code.str());
+		// in case it is bool need to conver it to i1
+		if (type == TypeN::BOOL) {
+			string temp = newTemp();
+			stringstream convert_code;
+			convert_code << temp << " = trunc i32 " << place << " to i1";
+			place = temp;
+			codeBuffer.emit(convert_code.str());
+		}
+	}
+	
+	auto* p = new Exp(type, place);
 	registerNode(p, id);
 	return p;
 }
 
 Exp* expFromCall(Node* pCall) {
 	CAST_PTR(Call, call, pCall);
-
+	// TODO: implement
 	auto* p = new Exp(call->getType());
 	registerNode(p, call);
 	return p;
@@ -228,8 +279,13 @@ Exp* expFromCall(Node* pCall) {
 
 Exp* expFromNum(Node* pNum) {
 	CAST_PTR(Num, num, pNum);
-	auto* p = new Exp(TypeN::INT,num->value);
+	//auto* p = new Exp(TypeN::INT, newTemp());
+	auto p = new Exp(TypeN::INT, to_string(num->value));
 	registerNode(p, num);
+
+	//stringstream assign_code;
+	//assign_code << p->place << " = add i32 0, " << num->value;
+	//codeBuffer.emit(assign_code.str());
 	return p;
 }
 
@@ -239,23 +295,47 @@ Exp* expFromByte(Node* pNum) {
 	if (!isByte(num)) {
 		throw errorByteTooLargeException(to_string(num->value));
 	}
-	auto* p = new Exp(TypeN::BYTE, num->value);
+	//auto* p = new Exp(TypeN::BYTE, newTemp());
+	auto p = new Exp(TypeN::BYTE, to_string(num->value));
 	registerNode(p, num);
+
+	//stringstream assign_code;
+	//assign_code << p->place << " = add i32 0, " << num->value;
+	//codeBuffer.emit(assign_code.str());
 	return p;
 }
 
-Exp* expFromString(Node* string) {
-	CAST_PTR(StringNode, exp, string);
-	auto* p = new Exp(TypeN::STRING, exp->s_value);
-	add_global_string(exp->s_value);
-	emitGlobalString(exp->s_value);
+Exp* expFromString(Node* pNode) {
+	// TODO: check that it works
+	CAST_PTR(String, pString, pNode);
+	
+	auto* p = new Exp(TypeN::STRING, newString());
 	registerNode(p);
+	// emit to the global buffer
+	stringstream string_declaration;
+	// add \00" to the end
+	string str = pString->s;
+	// taking out the qoutes(-2) and adding \00 (+1)
+	int n_bytes = str.length() - 1;
+	p->n_bytes = n_bytes;
+	str[str.length() - 1] = '\\';
+	str += "00\""; 
+	string_declaration << p->place << " = " << "constant [" << n_bytes << " x i8] c" << str;
+	codeBuffer.emitGlobal(string_declaration.str());
+
 	return p;
 }
 
-Exp* expFromBool(bool flag) {
-	auto* p = new Exp(TypeN::BOOL, flag);
+Exp* expFromBool(bool b) {
+	auto* p = new Exp(TypeN::BOOL);
 	registerNode(p);
+
+	stringstream br_code;
+	br_code << "br i1 " << b << ", label @, label @";
+	int buffer_index = codeBuffer.emit(br_code.str());
+	p->truelist = codeBuffer.makelist({ buffer_index, FIRST });
+	p->falselist = codeBuffer.makelist({ buffer_index, SECOND });
+
 	return p;
 }
 
@@ -265,84 +345,97 @@ Exp* expFromNot(Node* pExp) {
 	if (!isBool(exp)) {
 		throw errorMismatchException();
 	}
-	auto* p = new Exp(TypeN::BOOL, !exp->b_value);
+	auto* p = new Exp(TypeN::BOOL);
 	registerNode(p, exp);
+	
+	p->truelist = exp->falselist;
+	p->falselist = exp->truelist;
+
 	return p;
 }
 
-Exp* expFromLogicop(Node* pExp1, Node* pExp2, LogicOp op) {
+Exp* expFromLogicop(Node* pExp1, Node* pExp2, Node* pM, LogicOp op) {
 	CAST_PTR(Exp, exp1, pExp1);
 	CAST_PTR(Exp, exp2, pExp2);
+	CAST_PTR(M, m, pM);
 
 	if (!(isBool(exp1) && isBool(exp2))) {
 		throw errorMismatchException();
 	}
-	bool flag = false;
-	switch (op) {
-		case LogicOp::AND:
-			flag = exp1->b_value && exp2->b_value;
-			break;
-		case LogicOp::OR:
-			flag = exp1->b_value || exp2->b_value;
-			break;
-		default:
-			assert(false); //Should not get here
-	}
-	auto* p = new Exp(TypeN::BOOL, flag);
+	auto* p = new Exp(TypeN::BOOL, exp1->place);
 	registerNode(p, exp1, exp2);
-	return p;
-}
-
-static inline bool compareByRelOp(int x, int y, RelOp op) {
-	switch (op) {
-		case RelOp::GT:
-			return x>y;
-		case RelOp::LT:
-			return x<y;
-		case RelOp::GEQ:
-			return x>=y;
-		case RelOp::LEQ:
-			return x<=y;
-		default:
-			assert(false);
+	
+	switch (op)
+	{
+	case LogicOp::AND:
+		// if exp1 is true, then go evaluate exp2
+		codeBuffer.bpatch(exp1->truelist, m->label);
+		p->truelist = exp2->truelist;
+		p->falselist = codeBuffer.merge(exp1->falselist, exp2->falselist);
+		break;
+	case LogicOp::OR:
+		// if exp1 is false, then go evaluate exp2
+		codeBuffer.bpatch(exp1->falselist, m->label);
+		p->falselist = exp2->falselist;
+		p->truelist = codeBuffer.merge(exp1->truelist, exp2->truelist);
+		break;
+	default:
+		assert(false); // should not get here
+		break;
 	}
+
+	return p;
 }
 
 Exp* expFromRelop(Node* pExp1, Node* pExp2, Node* pExp3) {
 	CAST_PTR(Exp, exp1, pExp1);
-	CAST_PTR(Exp, exp3, pExp3);
-	CAST_PTR(RelOperator, exp2, pExp2)
-	if (!(isNumeric(exp1) && isNumeric(exp3))) {
+	CAST_PTR(RelOperator, rel_op, pExp2);
+	CAST_PTR(Exp, exp2, pExp3);
+
+	if (!(isNumeric(exp1) && isNumeric(exp2))) {
 		throw errorMismatchException();
 	}
-	auto* p = new Exp(TypeN::BOOL, compareByRelOp(exp1->value, exp3->value, exp2->op));
-	registerNode(p, exp1, exp2);
+	auto* p = new Exp(TypeN::BOOL);
+	registerNode(p, exp1, rel_op, exp2);
+	
+	string op;
+	switch (rel_op->op)
+	{
+	case RelOp::LT:
+		op = "slt";
+		break;
+	case RelOp::GT:
+		op = "sgt";
+		break;
+	case RelOp::LEQ:
+		op = "sle";
+		break;
+	case RelOp::GEQ:
+		op = "sge";
+		break;
+	case RelOp::EQ:
+		op = "eq";
+		break;
+	case RelOp::NEQ:
+		op = "ne";
+		break;
+	default:
+		assert(false); //should not get here
+		break;
+	}
+
+	string temp = newTemp();
+	stringstream icmp_code;
+	icmp_code << temp << " = icmp " << op << " i32 " << exp1->place << ", " << exp2->place;
+	codeBuffer.emit(icmp_code.str());
+	stringstream br_code;
+	br_code << "br i1 " << temp << ", label @, label @";
+	int buffer_index = codeBuffer.emit(br_code.str());
+	p->truelist = codeBuffer.makelist({ buffer_index, FIRST });
+	p->falselist = codeBuffer.makelist({ buffer_index, SECOND });
+
 	return p;
 }
-
-static inline bool compareByEqOp(int x, int y, EqOp op) {
-	switch (op) {
-		case EqOp::EQ:
-			return x==y;
-		case EqOp::NEQ:
-			return x!=y;
-		default:
-			assert(false);
-	}
-}
-
-Exp* expFromEqualOp(Node* pExp1, Node* pExp2, Node* pExp3) {
-	CAST_PTR(Exp, exp1, pExp1);
-	CAST_PTR(Exp, exp3, pExp3);
-	CAST_PTR(EqualOperator, exp2, pExp2)
-	if (!(isNumeric(exp1) && isNumeric(exp3))) {
-		throw errorMismatchException();
-	}
-	auto* p = new Exp(TypeN::BOOL, compareByEqOp(exp1->value, exp3->value, exp2->op));
-	registerNode(p, exp1, exp2);
-	return p;
-}
-
 
 //======================== Type Rules =========================
 Type* typeInt() {
@@ -385,6 +478,7 @@ ExpList* expListRightRec(Node* pExp, Node* pExpList) {
 
 //========================Call Rules ==========================
 Call* call(Node* pId, Node* pExpList) {
+	// TODO: move out, should be in 'statementCall' or 'expFromCall'
 	CAST_PTR(Id, id, pId);
 	CAST_PTR(ExpList, expList, pExpList);
 
@@ -408,7 +502,7 @@ Call* call(Node* pId, Node* pExpList) {
 
 Call* call(Node* pId) {
 	CAST_PTR(Id, id, pId);
-
+	// TODO: implement
 	vector<std::pair<string, TypeN>> argTypes = getFuncArgTypes(id);
 	vector<string> argString = typeVecToStringVec(argTypes);
 	if (argTypes.size() != 0) {
@@ -420,35 +514,38 @@ Call* call(Node* pId) {
 }
 
 //======================  Statement Rules =====================
-Statement* statementList(Node* pStatements) {
-	assert(pStatements);
-	assert(checkPtr<Statements>(pStatements));
+Statement* statementList(Node* pNode) {
+	// TODO: implement
+	CAST_PTR(Statements, pStatements, pNode);
 
 	auto* p = new Statement();
 	registerNode(p, pStatements);
+
 	return p;
 }
 
-Statement* statementVarDecl(Node* pType, Node* pId) {
-	assert(pType);
-	assert(checkPtr<Type>(pType));
-	assert(pId);
-	assert(checkPtr<Id>(pId));
+Statement* statementVarDecl(Node* pNode1, Node* pNode2) {
+	// TODO: implement
+	CAST_PTR(Type, pType, pNode1);
+	CAST_PTR(Id, pId, pNode2);
 
 	insertNewVar(pType, pId);
 	auto* p = new Statement();
 	registerNode(p, pType, pId);
+	// initialize the new var to 0
+	string ptr = getVarPtr(pId);
+	stringstream init_code;
+	init_code << "store i32 0, i32* " << ptr;
+	codeBuffer.emit(init_code.str());
 
 	return p;
 }
 
-Statement* statementVarDeclInit(Node* pType, Node* pId, Node* pExp) {
-	assert(pType);
-	assert(checkPtr<Type>(pType));
-	assert(pId);
-	assert(checkPtr<Id>(pId));
-	assert(pExp);
-	assert(checkPtr<Exp>(pExp));
+Statement* statementVarDeclInit(Node* pNode1, Node* pNode2, Node* pNode3) {
+	// TODO: only works for int, implement also for byte and bool
+	CAST_PTR(Type, pType, pNode1);
+	CAST_PTR(Id, pId, pNode2);
+	CAST_PTR(Exp, pExp, pNode3);
 	
 	if (! checkAssign(pType->getType(), pExp->getType())) {
 		throw errorMismatchException();
@@ -456,25 +553,40 @@ Statement* statementVarDeclInit(Node* pType, Node* pId, Node* pExp) {
 	insertNewVar(pType, pId);
 	auto* p = new Statement();
 	registerNode(p, pType, pId, pExp);
-	emitNewVarDeclInit(symbolTable->getVaribleOffset(pId->getName()), pExp);
+
+	// store the value of exp in the correct offset
+	int offset = symbolTable->getVaribleOffset(pId->getName());
+	// check that it is not an argument
+	assert(offset >= 0);
+
+	string ptr = getVarPtr(offset);
+	stringstream store_code;
+	store_code << "store i32 " << pExp->place << ", i32* " << ptr;
+	codeBuffer.emit(store_code.str());
+	
 	return p;
 }
 
-Statement* statementAssign(Node* pId, Node* pExp) {
-	assert(pId);
-	assert(checkPtr<Id>(pId));
-	assert(pExp);
-	assert(checkPtr<Exp>(pExp));
+Statement* statementAssign(Node* pNode1, Node* pNode2) {
+	CAST_PTR(Id, pId, pNode1);
+	CAST_PTR(Exp, pExp, pNode2);
 	
 	if (! checkAssign(getIdType(pId), pExp->getType())) {
 		throw errorMismatchException();
 	}
 	auto* p = new Statement();
 	registerNode(p, pId, pExp);
+	// TODO: what about assignment to one of the functions argument?
+	// get the local variable address, and store the exp into it
+	string ptr = getVarPtr(pId);
+	stringstream store_code;
+	store_code << "store i32 " << pExp->place << ", i32* " << ptr;
+	codeBuffer.emit(store_code.str());
 	return p;
 }
 
 Statement* statementCall(Node* pCall) {
+	// TODO: implement
 	assert(pCall);
 	assert(checkPtr<Call>(pCall));
 
@@ -484,6 +596,7 @@ Statement* statementCall(Node* pCall) {
 }
 
 Statement* statementReturn() {
+	// TODO: implement
 	if (! (getCurrFuncType() == TypeN::VOID)) {
 		throw errorMismatchException();
 	}
@@ -492,9 +605,9 @@ Statement* statementReturn() {
 	return p;
 }
 
-Statement* statementReturn(Node* pExp) {
-	assert(pExp);
-	assert(checkPtr<Exp>(pExp));
+Statement* statementReturn(Node* pNode) {
+	// TODO: implement
+	CAST_PTR(Exp, pExp, pNode);
 
 	if (! checkAssign(getCurrFuncType(), pExp->getType())) {
 		throw errorMismatchException();
@@ -504,13 +617,11 @@ Statement* statementReturn(Node* pExp) {
 	return p;
 }
 
-Statement* statementIfElse(Node* pExp, Node* pStatement1, Node* pStatement2) {
-	assert(pExp);
-	assert(checkPtr<Exp>(pExp));
-	assert(pStatement1);
-	assert(checkPtr<Statement>(pStatement1));
-	assert(pStatement2);
-	assert(checkPtr<Statement>(pStatement2));
+Statement* statementIfElse(Node* pNode1, Node* pNode2, Node* pNode3) {
+	// TODO: implement
+	CAST_PTR(Exp, pExp, pNode1);
+	CAST_PTR(Statement, pStatement1, pNode2);
+	CAST_PTR(Statement, pStatement2, pNode3);
 
 	if (! isBool(pExp)) {
 		throw errorMismatchException();
@@ -520,21 +631,47 @@ Statement* statementIfElse(Node* pExp, Node* pStatement1, Node* pStatement2) {
 	return p;
 }
 
-Statement* statementIf(Node* pExp, Node* pStatement) {
-	assert(pExp);
-	assert(checkPtr<Exp>(pExp));
-	assert(pStatement);
-	assert(checkPtr<Statement>(pStatement));
+Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
+	// TODO: implemnet
+	CAST_PTR(Exp, exp, pExp);
+	CAST_PTR(M, m, pM);
+	CAST_PTR(Statement, statement, pStatement);
+	CAST_PTR(N, n, pN);
 	
-	if (!isBool(pExp)) {
+	if (!isBool(exp)) {
 		throw errorMismatchException();
 	}
 	auto* p = new Statement();
-	registerNode(p, pExp, pStatement);
+	registerNode(p, exp, m, statement);
+
+	// backpatch the truelist of exp to go into the statement
+	codeBuffer.bpatch(exp->truelist, m->label);
+	// set the parent's Statement a nextlist attribute
+	p->nextlist = codeBuffer.merge(statement->nextlist, exp->falselist);
+	// TODO: not sure of this, mainly just so i can test this. 
+	p->nextlist = codeBuffer.merge(p->nextlist, n->nextlist);
+	string label = codeBuffer.genLabel();
+	codeBuffer.bpatch(p->nextlist, label);
+
+	return p;
+}
+
+Statement* statementWhile(Node* pExp, Node* pStatement) {
+	// TODO: implement
+	CAST_PTR(Exp, exp, pExp);
+	CAST_PTR(Statement, statement, pStatement);
+
+	if (!isBool(exp)) {
+		throw errorMismatchException();
+	}
+	auto* p = new Statement();
+	registerNode(p, exp, statement);
+
 	return p;
 }
 
 Statement* statementBreak() {
+	// TODO: implement
 	if (!inWhile()) {
 		throw errorUnexpectedBreakException();
 	}
@@ -544,6 +681,7 @@ Statement* statementBreak() {
 }
 
 Statement* statementContinue() {
+	// TODO:
 	if (!inWhile()) {
 		throw errorUnexpectedContinueException();
 	}
@@ -554,32 +692,31 @@ Statement* statementContinue() {
 
 //====================== Statements Rules =====================
 
-Statements* statementsEnd(Node* pStatement) {
-	assert(pStatement);
-	assert(checkPtr<Statement>(pStatement));
+Statements* statementsEnd(Node* pNode) {
+	CAST_PTR(Statement, pStatement, pNode);
 
 	auto* p = new Statements();
 	registerNode(p, pStatement);
+	
 	return p;
 }
 
 
-Statements* statementsLeftRec(Node* pStatements, Node* pStatement) {
-	assert(pStatements);
-	assert(checkPtr<Statements>(pStatements));
-	assert(pStatement);
-	assert(checkPtr<Statement>(pStatement));
+Statements* statementsLeftRec(Node* pNode1, Node* pNode2) {
+	CAST_PTR(Statements, pStatements, pNode1);
+	CAST_PTR(Statement, pStatement, pNode2);
 
 	auto* p = new Statements();
 	registerNode(p, pStatements, pStatement);
+
+
 	return p;
 }
 
 //====================== Program Rules ========================
 
-Program* program(Node* pFuncs) {
-	assert(pFuncs);
-	assert(checkPtr<Funcs>(pFuncs));
+Program* program(Node* pNode) {
+	CAST_PTR(Funcs, pFuncs, pNode);
 
 	endCompilation();
 
@@ -596,11 +733,9 @@ Funcs* funcs() {
 	return p;
 }
 
-Funcs* funcsRightRec(Node* pFuncDecl, Node* pFuncs) {
-	assert(pFuncDecl);
-	assert(checkPtr<FuncDecl>(pFuncDecl));
-	assert(pFuncs);
-	assert(checkPtr<Funcs>(pFuncs));
+Funcs* funcsRightRec(Node* pNode1, Node* pNode2) {
+	CAST_PTR(FuncDecl, pFuncDecl, pNode1);
+	CAST_PTR(Funcs, pFuncs, pNode2);
 
 	auto* p = new Funcs();
 	registerNode(p, pFuncDecl, pFuncs);
@@ -609,15 +744,12 @@ Funcs* funcsRightRec(Node* pFuncDecl, Node* pFuncs) {
 
 //====================== FuncDecl Rules ========================
 
-FuncDecl* funcDecl(Node* pRetType, Node* pId, Node* pFormals, Node* pStatements) {
-	assert(pRetType);
-	assert(checkPtr<RetType>(pRetType));
-	assert(pId);
-	assert(checkPtr<Id>(pId));
-	assert(pFormals);
-	assert(checkPtr<Formals>(pFormals));
-	assert(pStatements);
-	assert(checkPtr<Statements>(pStatements));
+FuncDecl* funcDecl(Node* pNode1, Node* pNode2, Node* pNode3, Node* pNode4) {
+	CAST_PTR(RetType, pRetType, pNode1);
+	CAST_PTR(Id, pId, pNode2);
+	CAST_PTR(Formals, pFormals, pNode3);
+	CAST_PTR(Statements, pStatements, pNode4);
+
 	emitFuncEnd(pRetType->getType());
 	auto* p = new FuncDecl((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
 	registerNode(p, pRetType, pId, pFormals, pStatements);
@@ -626,9 +758,8 @@ FuncDecl* funcDecl(Node* pRetType, Node* pId, Node* pFormals, Node* pStatements)
 
 //====================== RetType Rules ========================
 
-RetType* retType(Node* pType) {
-	assert(pType);
-	assert(checkPtr<Type>(pType));
+RetType* retType(Node* pNode) {
+	CAST_PTR(Type, pType, pNode);
 
 	auto* p = new RetType((Type*)pType);
 	registerNode(p, pType);
@@ -649,22 +780,20 @@ Formals* formals() {
 	return p;
 }
 
-Formals* formals(Node* pFormalsList) {
-	assert(pFormalsList);
-	assert(checkPtr<FormalsList>(pFormalsList));
+Formals* formals(Node* pNode) {
+	CAST_PTR(FormalsList, pFormalsList, pNode);
 
-	auto* p = new Formals((FormalsList*)pFormalsList);
+	auto* p = new Formals(pFormalsList);
 	registerNode(p, pFormalsList);
 	return p;
 }
 
 //====================== FormalsList Rules ========================
 
-FormalsList* formalsList(Node* pFormalDecl) {
-	assert(pFormalDecl);
-	assert(checkPtr<FormalDecl>(pFormalDecl));
+FormalsList* formalsList(Node* pNode) {
+	CAST_PTR(FormalDecl, pFormalDecl, pNode);
 
-	auto* p = new FormalsList((FormalDecl*)pFormalDecl);
+	auto* p = new FormalsList(pFormalDecl);
 	registerNode(p, pFormalDecl);
 	return p;
 }
@@ -686,17 +815,29 @@ FormalsList* formalsListRightRec(Node* pFormalDecl, Node* pFormalsList) {
 }
 
 //====================== FormalDecl Rules ========================
-FormalDecl* formalDecl(Node* pType, Node* pId) {
-	assert(pType);
-	assert(checkPtr<Type>(pType));
-	assert(pId);
-	assert(checkPtr<Id>(pId));
+FormalDecl* formalDecl(Node* pNode1, Node* pNode2) {
+	CAST_PTR(Type, pType, pNode1);
+	CAST_PTR(Id, pId, pNode2);
 
-	auto* p = new FormalDecl((Type*)pType, (Id*)pId);
+	auto* p = new FormalDecl(pType, pId);
 	registerNode(p, pType, pId);
 	return p;
 }
 
+//=========================Markers================================
+M* m() {
+	auto p = new M();
+	p->label = codeBuffer.genLabel();
+	registerNode(p);
+	return p;
+}
+
+N* n() {
+	auto p = new N();
+	int buffer_index = codeBuffer.emit("br label @");
+	p->nextlist = codeBuffer.makelist({ buffer_index, FIRST });
+	return p;
+}
 //====================== nested loops ============================
 void enterWhile() {
 	nestedWhileCounter++;
@@ -755,32 +896,6 @@ void end_global_prog() {
 }
 
 //====================== Buffer printers ============================
-void emitBinOpCode(Exp* x, Exp* y, BinOp op) {
-	return;
-/*
-	bool is_byte = x->getType() == TypeN::BYTE && y->getType() == TypeN::BYTE;
-	string op_type = is_byte?"i8":"i32",
-	exp_1 = x->getName();
-	exp_1 = 
-	switch (op) {
-		case BinOp::PLUS:
-			codeBuffer.emit("add" + op_type + exp_1 + " , " + exp_2);
-			break;
-		case BinOp::MINUS:
-			codeBuffer.emit("sub" + op_type + exp_1 + " , " + exp_2);
-			break;
-		case BinOp::MUL:
-			codeBuffer.emit("mul" + op_type + exp_1 + " , " + exp_2);
-			break;
-		case BinOp::DIV:
-			//
-			break;
-		default:
-			assert(false);
-	}
-	*/
-}
-
 static inline string to_llvm_retType(TypeN type) {
 	switch (type) {
 		case TypeN::INT:
@@ -809,7 +924,7 @@ void emitFuncDef(RetType* type, Id* id, Formals* f) {
 	code << "{";
 	codeBuffer.emit(code.str());
 	//allocate local stack
-	codeBuffer.emit(newStack() + " = alloca [50 x i32]");
+	codeBuffer.emit("%stack = alloca [50 x i32]");
 }
 
 void emitFuncEnd(TypeN type) {
@@ -834,36 +949,6 @@ void emitFuncEnd(TypeN type) {
 	codeBuffer.emit("}");
 }
 
-string getExpressionValueString(Node* pExp) {
-	std::stringstream value_string;
-	CAST_PTR(Exp, exp, pExp);
-	value_string << std::to_string(exp->value);
-	return value_string.str();
-}
-
-
-//Input: local varible offset in stack
-//Output: a register holding address
-string getLocalVarAddress(int offset) {
-	std::stringstream get_effective_address;
-	if (offset < 0) {
-		//LLVM Function arguments are numbered %0, %1, ...
-		//Symbol Table function arguments are numbered -1, -2 ...
-		get_effective_address << "%";
-		get_effective_address << std::to_string((-1) - offset);
-		return get_effective_address.str();
-	}
-	string stack = getCurrentStack();
-	string store_address = newTemp();
-	get_effective_address << store_address;
-	get_effective_address << " = getelementptr [50 x i32], [50 x i32]* ";
-	get_effective_address << stack;
-	get_effective_address << ", i32 0, i32 ";
-	get_effective_address << std::to_string(offset);
-	codeBuffer.emit(get_effective_address.str());
-	return store_address;
-}
-
 string loadValueToReg (string address_reg) {
 	std::stringstream load_statement;
 	string value_reg = newTemp();
@@ -872,37 +957,6 @@ string loadValueToReg (string address_reg) {
 	load_statement << address_reg;
 	codeBuffer.emit(load_statement.str());
 	return value_reg;
-}
-void emitNewVarDeclInit (int offset, Node* exp) {
-	string store_address = getLocalVarAddress(offset);
-
-	std::stringstream assign_value_to_reg;
-	string value_temp = newTemp();
-	assign_value_to_reg << value_temp;
-	assign_value_to_reg << " = add i32 0, ";
-	assign_value_to_reg << getExpressionValueString(exp);
-	codeBuffer.emit(assign_value_to_reg.str());
-	
-	std::stringstream store_at_affective_address;
-	store_at_affective_address << "store i32 ";
-	store_at_affective_address << value_temp;
-	store_at_affective_address << ", i32* ";
-	store_at_affective_address << store_address;
-	codeBuffer.emit(store_at_affective_address.str());
-
-}
-
-void emitGlobalString(string value) {
-	std::stringstream code;
-	code << get_global_string(value);
-	code << " = constant [";
-    code << std::to_string(value.length()-1);
-    code << " x i8] c\"";
-	value.erase(std::remove(value .begin(), value .end(), '"'), value .end());
-    code << value;
-	code << "\\00\"";
-    //code << "\\0A\\00\"";
-    codeBuffer.emitGlobal(code.str());
 }
 
 void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args) {
@@ -920,27 +974,10 @@ void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args) {
 		}
 		if (p->getType() == TypeN::STRING) {
 			//Single argument - pointer to global string varible
-			int size = (p->s_value).length() - 1;
-			args_list << "i8* getelementptr([";
-			args_list << std::to_string(size);
-			args_list << " x i8], [";
-			args_list << std::to_string(size);
-			args_list << " x i8]* ";
-			args_list << get_global_string(p->s_value);
-			args_list << ", i32 0, i32 0)";
+			args_list << "i8* getelementptr([" << p->n_bytes << " x i8], [" << p->n_bytes << " x i8]* " << p->place <<", i32 0, i32 0)";
 		}
 		if (p->getType() == TypeN::INT) {
-			string varible_reg;
-			if (p->getName() =="") {
-				//Clean valued epxression
-				varible_reg = std::to_string(p->value);
-			} else {
-				string address_reg = getLocalVarAddress(symbolTable->getVaribleOffset(p->getName()));
-				varible_reg = loadValueToReg(address_reg);
-			}
-			args_list << "i32 ";
-			args_list << varible_reg;
-
+			args_list << "i32 " << p->place;
 		}
 		skip_comma = false;
 	}

@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <memory>
-
+#include "bp.hpp"
 using std::string;
 using std::ostream;
 using std::vector;
@@ -16,9 +16,9 @@ using std::to_string;
 // scoped enum, to not interfere with the tokens
 enum class TypeN { VOID, BOOL, INT, BYTE, STRING };
 enum class LogicOp { AND, OR};
-enum class RelOp { LT, LEQ, GT, GEQ}; // <, >, >=, <=
-enum class EqOp {EQ, NEQ};// ==, !=
+enum class RelOp { LT, LEQ, GT, GEQ, EQ, NEQ}; // <, >, >=, <=, ==, !=
 enum class BinOp {PLUS, MINUS, MUL, DIV}; // +,-,*,/
+typedef vector<pair<int, BranchLabelIndex>> BackpatchList;
 ostream& operator<<(ostream&, TypeN);
 string to_string(TypeN);
 
@@ -52,10 +52,10 @@ public:
 };
 
 //==========================String=======================================
-class StringNode : public Node {
+class String : public Node {
     public:
-    string s_value;
-    StringNode(const string& s) : s_value(s) {}
+    string s;
+    String(const string& s) : s(s) {}
 };
 
 //==========================Operators=======================================
@@ -71,12 +71,6 @@ class RelOperator : public Node {
     RelOperator(RelOp o) : op(o) {}
 };
 
-class EqualOperator : public Node {
-    public:
-    EqOp op;
-    EqualOperator(EqOp o) : op(o) {}
-};
-
 //===========================ID===========================================
 class Id : public Node {
 public:
@@ -86,14 +80,17 @@ public:
 // ========================= Exp ========================================
 class Exp: public Node {
 public:
-    int value;
-    string s_value;
-    bool b_value;
-    Exp(string name, TypeN type) : Node(name, type) {s_value = ""; b_value = false; value=0;}
+    // this is the place that the value will be stored, how to address it
+    string place;
+    int n_bytes;
+    // places to backpatch with the address that 
+    BackpatchList falselist;
+    BackpatchList truelist;
+    Exp(TypeN type, string place) : Node(type), place(place) {}
     Exp(TypeN type) : Node(type) {}
-    Exp(TypeN type, int value) : Node (type), value(value) {s_value = ""; b_value = false;}
-    Exp(TypeN type, string s) : Node(type), s_value(s) {value = 0; b_value = false;}
-    Exp(TypeN type, bool flag) : Node(type), b_value(flag) {value = 0; s_value = "";}
+    // copy everithing except of the childeren & name
+    Exp(const Exp& exp) : Node(exp.getType()), place(exp.place), n_bytes(exp.n_bytes),
+        falselist(exp.falselist), truelist(exp.truelist) {}
 };
 
 //========================== Type =======================================
@@ -116,10 +113,16 @@ public:
     Call(TypeN type) : Node(type) {}
 };
 //========================= Statement =================================
-class Statement : public Node {};
+class Statement : public Node {
+public:
+    BackpatchList nextlist;
+};
 
 //========================= Statements ================================
-class Statements : public Node {};
+class Statements : public Node {
+public:
+    BackpatchList nextlist;
+};
 
 //===========================FormalDecl================================
 class FormalDecl : public Node {
@@ -172,5 +175,16 @@ class Funcs : public Node {};
 
 //===========================Program================================
 class Program : public Node {};
+
+//===========================Markers===============================
+class M : public Node {
+public:
+    string label;
+};
+
+class N : public Node {
+public:
+    BackpatchList nextlist;
+};
 
 #endif // _NODE

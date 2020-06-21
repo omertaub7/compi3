@@ -2,14 +2,12 @@
 #define EX5_CODE_GEN_UTILS
 
 #include <string>
-#include "bp.hpp"
-#include <map>
-using namespace std;
+using std::string;
+using std::to_string;
 
 
+// creates a new temporary variable identifier
 string newTemp();
-string newStack();
-string getCurrentStack();
-void add_global_string(string name);
-string get_global_string(string name);
+// creates a new globel string identifier 
+string newString();
 #endif
