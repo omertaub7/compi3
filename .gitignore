@@ -6,7 +6,6 @@ test_in*
 .nfs*
 exp/*
 hw3
-tests*
 fake_main.cpp
 
 Debug/*

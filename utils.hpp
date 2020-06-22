@@ -59,7 +59,7 @@ TypeN getCurrFuncType();
 // checks if we are currently inside a while loop
 bool inWhile();
 // saves the pointer in the global pointer arr, and sets the children
-void registerNode(Node* p, Node* c1 = NULL, Node* c2 = NULL, Node* c3 = NULL, Node* c4 = NULL);
+void registerNode(Node* p);
 // deletes all the pointer that where allocated
 void clearMemory();
 // to be called when the parser finished it's work
@@ -102,7 +102,7 @@ Exp* expFromBool(bool);
 Exp* expFromNot(Node*);
 // Exp -> Exp AND Exp
 // Exp -> Exp OR Exp
-Exp* expFromLogicop(Node*, Node*, Node*, LogicOp);
+Exp* expFromLogicop(Node* pExp1, Node* pM, Node* pExp2, LogicOp);
 // Exp -> Exp RELOP Exp
 Exp* expFromRelop(Node* pExp1, Node* pExp2, Node* pExp3);
 
@@ -143,12 +143,15 @@ Statement* statementReturn();
 // Statement -> RETURN Exp ;
 Statement* statementReturn(Node* pExp);
 // Statement -> IF ( Exp ) Statement ELSE Statement
+Statement* statementIfElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
+	Node* pM2, Node* pStatement2, Node* pN2);
 // Statement -> WHILE ( Exp ) Statement ELSE Statement
-Statement* statementIfElse(Node* pExp, Node* pStatement1, Node* pStatement2);
+Statement* statementWhileElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
+	Node* pM2, Node* pStatement2, Node* pN2);
 // Statement -> IF ( Exp ) Statement
-// Statement -> WHILE ( Exp ) Statement
 Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN);
-Statement* statementWhile(Node* pExp, Node* pStatement);
+// Statement -> WHILE ( Exp ) Statement
+Statement* statementWhile(Node* pExp, Node* pM, Node* pStatement, Node* pN);
 // Statement -> BREAK ;
 Statement* statementBreak();
 // Statement -> CONTINUE ;
@@ -198,8 +201,12 @@ FormalsList* formalsListRightRec(Node* pFormalDecl, Node* pFormalsList);
 FormalDecl* formalDecl(Node* pType, Node* pId);
 
 //========================= Markers ==============================
+// creates and empty label
 M* m();
+// creates an empty unconditional br, with nextlist
 N* n();
+// checks if the last statements have a non-empty next list, and backpatches them before next statement
+void backpatchStatements(Node* pStatements);
 
 //====================== nested loops ============================
 void enterWhile();
@@ -210,7 +217,8 @@ void enterScope();
 void exitScope();
 
 //====================== Functions handler ============================
-void exitFunc();
+// in addition, will backpatch any unresolved backpatching and will return a default value
+void exitFunc(Node* pStatements);
 void setReturnType(Node* retType);
 void addFunc(Node* retType, Node* ID, Node* Formals);
 

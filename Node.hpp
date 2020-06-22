@@ -27,7 +27,6 @@ class Node {
 private:
     string name;
     TypeN type;
-    vector<Node*> children; 
 
 public:
     Node();
@@ -37,11 +36,6 @@ public:
     virtual ~Node() = default;
     virtual string getName() const;
     virtual TypeN getType() const;
-    virtual void addChild(Node* child);
-
-    // for testing only
-    virtual vector<string> _getInfo() const;
-    virtual string _getClassName() const;
 };
 
 //==========================Num=======================================

@@ -1,0 +1,32 @@
+// tests that the program is branching correctly in simple if statement
+void main () {
+    int x = 10;
+    int y = 15;
+
+    if (x > y)
+        int z = 20;
+    int w = 30;
+    if (w > x)
+        print("GOOD");
+    if (x > y)
+        print("BAD");
+    if (w == w)
+        print("GOOD");
+    if (x != 10)
+        print("BAD");
+    
+    int marker = 666;
+
+    if (x == 10 and y == 15) {
+        print("GOOD");
+        w = w + w;
+        if (w == 60 or y > 15) {
+            print("GOOD");
+        }
+        if (y > 15 and w == 60) {
+            print("BAD");
+        }
+    }
+
+    return;
+}

@@ -35,27 +35,6 @@ TypeN Node::getType() const {
     return type;
 }
 
-void Node::addChild(Node* child) {
-    children.push_back(child);
-}
-
-vector<string> Node::_getInfo() const{
-    vector<string> info;
-    info.push_back(_getClassName());
-    info.push_back(name);
-    info.push_back(to_string(type));
-    
-    for(Node* child : children) {
-        vector<string> child_info = child->_getInfo();
-        info.insert(info.end(), child_info.begin(), child_info.end());
-    }
-    return info;
-}
-
-string Node::_getClassName() const {
-    return "Node";
-}
-
 
 //========================== Exp List ====================================
 ExpList::ExpList(Exp* pExp) {

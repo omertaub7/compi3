@@ -73,21 +73,9 @@ bool inWhile() {
 	return false;
 }
 
-// saves the pointer in the global pointer arr, and sets the children
-void registerNode(Node* p, Node* c1, Node* c2, Node* c3, Node* c4) {
+// saves the pointer in the global pointer arr
+void registerNode(Node* p) {
 	globalPtrArr->push_back(p);
-	if (c1) {
-		p->addChild(c1);
-	}
-	if (c2) {
-		p->addChild(c2);
-	}
-	if (c3) {
-		p->addChild(c3);
-	}
-	if (c4) {
-		p->addChild(c4);
-	}
 }
 
 void clearMemory() {
@@ -187,7 +175,7 @@ RelOperator* getRelOp(const string& s) {
 Exp* expFromExp(Node* pExp) {
 	CAST_PTR(Exp, exp, pExp);
 	auto* p = new Exp(*exp);
-	registerNode(p, exp);
+	registerNode(p);
 
 	return p;
 }
@@ -205,7 +193,7 @@ Exp* expFromBinop(Node* pExp1, Node* pExp2, BinOp op) {
 	}
 
 	auto* p = new Exp(type, newTemp());
-	registerNode(p, exp1, exp2);
+	registerNode(p);
 
 	string opcode;
 	switch (op)
@@ -265,7 +253,7 @@ Exp* expFromId(Node* pId) {
 	}
 	
 	auto* p = new Exp(type, place);
-	registerNode(p, id);
+	registerNode(p);
 	return p;
 }
 
@@ -273,19 +261,16 @@ Exp* expFromCall(Node* pCall) {
 	CAST_PTR(Call, call, pCall);
 	// TODO: implement
 	auto* p = new Exp(call->getType());
-	registerNode(p, call);
+	registerNode(p);
 	return p;
 }
 
 Exp* expFromNum(Node* pNum) {
 	CAST_PTR(Num, num, pNum);
-	//auto* p = new Exp(TypeN::INT, newTemp());
-	auto p = new Exp(TypeN::INT, to_string(num->value));
-	registerNode(p, num);
 
-	//stringstream assign_code;
-	//assign_code << p->place << " = add i32 0, " << num->value;
-	//codeBuffer.emit(assign_code.str());
+	auto p = new Exp(TypeN::INT, to_string(num->value));
+	registerNode(p);
+
 	return p;
 }
 
@@ -295,18 +280,13 @@ Exp* expFromByte(Node* pNum) {
 	if (!isByte(num)) {
 		throw errorByteTooLargeException(to_string(num->value));
 	}
-	//auto* p = new Exp(TypeN::BYTE, newTemp());
 	auto p = new Exp(TypeN::BYTE, to_string(num->value));
-	registerNode(p, num);
+	registerNode(p);
 
-	//stringstream assign_code;
-	//assign_code << p->place << " = add i32 0, " << num->value;
-	//codeBuffer.emit(assign_code.str());
 	return p;
 }
 
 Exp* expFromString(Node* pNode) {
-	// TODO: check that it works
 	CAST_PTR(String, pString, pNode);
 	
 	auto* p = new Exp(TypeN::STRING, newString());
@@ -346,7 +326,7 @@ Exp* expFromNot(Node* pExp) {
 		throw errorMismatchException();
 	}
 	auto* p = new Exp(TypeN::BOOL);
-	registerNode(p, exp);
+	registerNode(p);
 	
 	p->truelist = exp->falselist;
 	p->falselist = exp->truelist;
@@ -354,7 +334,7 @@ Exp* expFromNot(Node* pExp) {
 	return p;
 }
 
-Exp* expFromLogicop(Node* pExp1, Node* pExp2, Node* pM, LogicOp op) {
+Exp* expFromLogicop(Node* pExp1, Node* pM, Node* pExp2, LogicOp op) {
 	CAST_PTR(Exp, exp1, pExp1);
 	CAST_PTR(Exp, exp2, pExp2);
 	CAST_PTR(M, m, pM);
@@ -363,7 +343,7 @@ Exp* expFromLogicop(Node* pExp1, Node* pExp2, Node* pM, LogicOp op) {
 		throw errorMismatchException();
 	}
 	auto* p = new Exp(TypeN::BOOL, exp1->place);
-	registerNode(p, exp1, exp2);
+	registerNode(p);
 	
 	switch (op)
 	{
@@ -396,7 +376,7 @@ Exp* expFromRelop(Node* pExp1, Node* pExp2, Node* pExp3) {
 		throw errorMismatchException();
 	}
 	auto* p = new Exp(TypeN::BOOL);
-	registerNode(p, exp1, rel_op, exp2);
+	registerNode(p);
 	
 	string op;
 	switch (rel_op->op)
@@ -462,7 +442,7 @@ ExpList* expListFromExp(Node* pExp) {
 	CAST_PTR(Exp, exp, pExp);
 
 	auto* p = new ExpList(exp);
-	registerNode(p, exp);
+	registerNode(p);
 	return p;
 }
 
@@ -472,7 +452,7 @@ ExpList* expListRightRec(Node* pExp, Node* pExpList) {
 	CAST_PTR(ExpList, expList, pExpList);
 
 	auto* p = new ExpList(exp, expList);
-	registerNode(p, exp, expList);
+	registerNode(p);
 	return p;
 }
 
@@ -496,7 +476,7 @@ Call* call(Node* pId, Node* pExpList) {
 	auto* p = new Call(getFuncType(id));
 	emitFunctionCall(getFuncType(id), id->getName(), recievedExpressions);
 	//TODO: need to emit: call function.ret_type function.arg_types function.name function.arg_list
-	registerNode(p, id, expList);
+	registerNode(p);
 	return p;
 }
 
@@ -509,7 +489,7 @@ Call* call(Node* pId) {
 		throw errorPrototypeMismatchException(argString, id->getName());
 	}
 	auto* p = new Call(getFuncType(id));
-	registerNode(p, id);
+	registerNode(p);
 	return p;
 }
 
@@ -519,7 +499,9 @@ Statement* statementList(Node* pNode) {
 	CAST_PTR(Statements, pStatements, pNode);
 
 	auto* p = new Statement();
-	registerNode(p, pStatements);
+	registerNode(p);
+
+	p->nextlist = pStatements->nextlist;
 
 	return p;
 }
@@ -531,7 +513,7 @@ Statement* statementVarDecl(Node* pNode1, Node* pNode2) {
 
 	insertNewVar(pType, pId);
 	auto* p = new Statement();
-	registerNode(p, pType, pId);
+	registerNode(p);
 	// initialize the new var to 0
 	string ptr = getVarPtr(pId);
 	stringstream init_code;
@@ -552,7 +534,7 @@ Statement* statementVarDeclInit(Node* pNode1, Node* pNode2, Node* pNode3) {
 	}
 	insertNewVar(pType, pId);
 	auto* p = new Statement();
-	registerNode(p, pType, pId, pExp);
+	registerNode(p);
 
 	// store the value of exp in the correct offset
 	int offset = symbolTable->getVaribleOffset(pId->getName());
@@ -575,7 +557,7 @@ Statement* statementAssign(Node* pNode1, Node* pNode2) {
 		throw errorMismatchException();
 	}
 	auto* p = new Statement();
-	registerNode(p, pId, pExp);
+	registerNode(p);
 	// TODO: what about assignment to one of the functions argument?
 	// get the local variable address, and store the exp into it
 	string ptr = getVarPtr(pId);
@@ -591,7 +573,7 @@ Statement* statementCall(Node* pCall) {
 	assert(checkPtr<Call>(pCall));
 
 	auto* p = new Statement();
-	registerNode(p, pCall);
+	registerNode(p);
 	return p;
 }
 
@@ -613,22 +595,41 @@ Statement* statementReturn(Node* pNode) {
 		throw errorMismatchException();
 	}
 	auto* p = new Statement();
-	registerNode(p, pExp);
+	registerNode(p);
 	return p;
 }
 
-Statement* statementIfElse(Node* pNode1, Node* pNode2, Node* pNode3) {
+Statement* statementIfElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
+	Node* pM2, Node* pStatement2, Node* pN2) {
 	// TODO: implement
-	CAST_PTR(Exp, pExp, pNode1);
-	CAST_PTR(Statement, pStatement1, pNode2);
-	CAST_PTR(Statement, pStatement2, pNode3);
+	CAST_PTR(Exp, exp, pExp);
+	CAST_PTR(M, m1, pM1);
+	CAST_PTR(Statement, statement1, pStatement1);
+	CAST_PTR(N, n1, pN1);
+	CAST_PTR(M, m2, pM2);
+	CAST_PTR(Statement, statement2, pStatement2);
+	CAST_PTR(N, n2, pN2);
 
-	if (! isBool(pExp)) {
+	if (!isBool(exp)) {
 		throw errorMismatchException();
 	}
+
 	auto* p = new Statement();
-	registerNode(p, pExp, pStatement1, pStatement2);
+	registerNode(p);
+	// backpatching
+	codeBuffer.bpatch(exp->truelist, m1->label);
+	codeBuffer.bpatch(exp->falselist, m2->label);
+	p->nextlist = codeBuffer.merge(statement1->nextlist, statement2->nextlist);
+	p->nextlist = codeBuffer.merge(p->nextlist, n1->nextlist);
+	p->nextlist = codeBuffer.merge(p->nextlist, n2->nextlist);
+
 	return p;
+}
+
+Statement* statementWhileElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
+	Node* pM2, Node* pStatement2, Node* pN2) {
+	// TODO:
+	return NULL;
 }
 
 Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
@@ -642,32 +643,20 @@ Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
 		throw errorMismatchException();
 	}
 	auto* p = new Statement();
-	registerNode(p, exp, m, statement);
+	registerNode(p);
 
 	// backpatch the truelist of exp to go into the statement
 	codeBuffer.bpatch(exp->truelist, m->label);
 	// set the parent's Statement a nextlist attribute
-	p->nextlist = codeBuffer.merge(statement->nextlist, exp->falselist);
-	// TODO: not sure of this, mainly just so i can test this. 
+	p->nextlist = codeBuffer.merge(statement->nextlist, exp->falselist); 
 	p->nextlist = codeBuffer.merge(p->nextlist, n->nextlist);
-	string label = codeBuffer.genLabel();
-	codeBuffer.bpatch(p->nextlist, label);
 
 	return p;
 }
 
-Statement* statementWhile(Node* pExp, Node* pStatement) {
+Statement* statementWhile(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
 	// TODO: implement
-	CAST_PTR(Exp, exp, pExp);
-	CAST_PTR(Statement, statement, pStatement);
-
-	if (!isBool(exp)) {
-		throw errorMismatchException();
-	}
-	auto* p = new Statement();
-	registerNode(p, exp, statement);
-
-	return p;
+	return NULL;
 }
 
 Statement* statementBreak() {
@@ -696,7 +685,9 @@ Statements* statementsEnd(Node* pNode) {
 	CAST_PTR(Statement, pStatement, pNode);
 
 	auto* p = new Statements();
-	registerNode(p, pStatement);
+	registerNode(p);
+
+	p->nextlist = pStatement->nextlist;
 	
 	return p;
 }
@@ -707,8 +698,10 @@ Statements* statementsLeftRec(Node* pNode1, Node* pNode2) {
 	CAST_PTR(Statement, pStatement, pNode2);
 
 	auto* p = new Statements();
-	registerNode(p, pStatements, pStatement);
+	registerNode(p);
 
+	// if pStatements had a nextlist it sould have already been bapatched in backpatchStatements()
+	p->nextlist = pStatement->nextlist;
 
 	return p;
 }
@@ -721,7 +714,7 @@ Program* program(Node* pNode) {
 	endCompilation();
 
 	auto* p = new Program();
-	registerNode(p, pFuncs);
+	registerNode(p);
 	return p;
 }
 
@@ -738,7 +731,7 @@ Funcs* funcsRightRec(Node* pNode1, Node* pNode2) {
 	CAST_PTR(Funcs, pFuncs, pNode2);
 
 	auto* p = new Funcs();
-	registerNode(p, pFuncDecl, pFuncs);
+	registerNode(p);
 	return p;
 }
 
@@ -752,7 +745,7 @@ FuncDecl* funcDecl(Node* pNode1, Node* pNode2, Node* pNode3, Node* pNode4) {
 
 	emitFuncEnd(pRetType->getType());
 	auto* p = new FuncDecl((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
-	registerNode(p, pRetType, pId, pFormals, pStatements);
+	registerNode(p);
 	return p;
 }
 
@@ -762,7 +755,7 @@ RetType* retType(Node* pNode) {
 	CAST_PTR(Type, pType, pNode);
 
 	auto* p = new RetType((Type*)pType);
-	registerNode(p, pType);
+	registerNode(p);
 	return p;
 }
 
@@ -784,7 +777,7 @@ Formals* formals(Node* pNode) {
 	CAST_PTR(FormalsList, pFormalsList, pNode);
 
 	auto* p = new Formals(pFormalsList);
-	registerNode(p, pFormalsList);
+	registerNode(p);
 	return p;
 }
 
@@ -794,7 +787,7 @@ FormalsList* formalsList(Node* pNode) {
 	CAST_PTR(FormalDecl, pFormalDecl, pNode);
 
 	auto* p = new FormalsList(pFormalDecl);
-	registerNode(p, pFormalDecl);
+	registerNode(p);
 	return p;
 }
 
@@ -810,7 +803,7 @@ FormalsList* formalsListRightRec(Node* pFormalDecl, Node* pFormalsList) {
 		}
 	}
 	auto* p = new FormalsList(formalDecl, formalsList);
-	registerNode(p, pFormalDecl, pFormalsList);
+	registerNode(p);
 	return p;
 }
 
@@ -820,24 +813,34 @@ FormalDecl* formalDecl(Node* pNode1, Node* pNode2) {
 	CAST_PTR(Id, pId, pNode2);
 
 	auto* p = new FormalDecl(pType, pId);
-	registerNode(p, pType, pId);
+	registerNode(p);
 	return p;
 }
 
 //=========================Markers================================
 M* m() {
 	auto p = new M();
-	p->label = codeBuffer.genLabel();
 	registerNode(p);
+	p->label = codeBuffer.genLabel();
 	return p;
 }
 
 N* n() {
 	auto p = new N();
+	registerNode(p);
 	int buffer_index = codeBuffer.emit("br label @");
 	p->nextlist = codeBuffer.makelist({ buffer_index, FIRST });
 	return p;
 }
+
+void backpatchStatements(Node* pStatements) {
+	CAST_PTR(Statements, statements, pStatements);
+	if (statements->nextlist.size() > 0) {
+		string label = codeBuffer.genLabel();
+		codeBuffer.bpatch(statements->nextlist, label);
+	}
+}
+
 //====================== nested loops ============================
 void enterWhile() {
 	nestedWhileCounter++;
@@ -870,7 +873,33 @@ void addFunc(Node* retType, Node* identifier, Node* formals) {
 	emitFuncDef(t, iden, f);
 }
 
-void exitFunc() {
+void exitFunc(Node* pStatements) {
+	CAST_PTR(Statements, statements, pStatements);
+	
+	if (statements->nextlist.size() > 0) {
+		string label = codeBuffer.genLabel();
+		codeBuffer.bpatch(statements->nextlist, label);
+	}
+	TypeN type = getCurrFuncType();
+	switch (type)
+	{
+	case TypeN::VOID:
+		codeBuffer.emit("ret void");
+		break;
+	case TypeN::BOOL:
+		codeBuffer.emit("ret i1 0");
+		break;
+	case TypeN::INT:
+		codeBuffer.emit("ret i32 0");
+		break;
+	case TypeN::BYTE:
+		codeBuffer.emit("ret i32 0");
+		break;
+	default:
+		assert(false); // sould not get here
+		break;
+	}
+	
 	exitScope();
 }
 
