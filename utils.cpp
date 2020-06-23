@@ -502,7 +502,8 @@ Statement* statementList(Node* pNode) {
 	registerNode(p);
 
 	p->nextlist = pStatements->nextlist;
-
+	p->breakList = pStatements->breakList;
+	p->continueList = pStatements->continueList;
 	return p;
 }
 
@@ -623,6 +624,9 @@ Statement* statementIfElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
 	p->nextlist = codeBuffer.merge(p->nextlist, n1->nextlist);
 	p->nextlist = codeBuffer.merge(p->nextlist, n2->nextlist);
 
+	p->breakList = codeBuffer.merge(statement1->breakList, statement2->breakList);
+	p->continueList = codeBuffer.merge(statement1->continueList, statement2->continueList);
+
 	return p;
 }
 
@@ -651,6 +655,8 @@ Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
 	p->nextlist = codeBuffer.merge(statement->nextlist, exp->falselist); 
 	p->nextlist = codeBuffer.merge(p->nextlist, n->nextlist);
 
+	p->breakList = statement->breakList;
+	p->continueList = statement->continueList;
 	return p;
 }
 
@@ -668,13 +674,13 @@ Statement* statementWhile(Node* pN, Node* pM1, Node* pExp, Node* pM2, Node* pSta
 	auto* p = new Statement();
 	registerNode(p);
 
-	string label_1 = m1->label;
-	string label_2 = m2->label;
+	string label_1 = m1->label; // Exp evaluation
+	string label_2 = m2->label;	// Exp is true - begin of statements
 
-	string label_3 = codeBuffer.genLabel();
+	string label_3 = codeBuffer.genLabel(); // End of statements - re-evaluate the expression
 	codeBuffer.emit("br label %" + label_1);
 
-	string label_4 = codeBuffer.genLabel();
+	string label_4 = codeBuffer.genLabel(); // statements outside of loop
 	codeBuffer.bpatch(n1->nextlist, label_1);
 	codeBuffer.bpatch(n2->nextlist, label_3);
 	// backpatch the truelist of exp to go into the statement
@@ -683,7 +689,7 @@ Statement* statementWhile(Node* pN, Node* pM1, Node* pExp, Node* pM2, Node* pSta
 	// backpatch the break statements to end of while loop and continue statements back to bool exp evaluation
 	codeBuffer.bpatch(statement->continueList, label_1);
 	codeBuffer.bpatch(statement->breakList, label_4);
-	codeBuffer.bpatch(statement->nextlist, label_4);
+	codeBuffer.bpatch(statement->nextlist, label_3);
 	
 	return p;
 }
@@ -738,7 +744,8 @@ Statements* statementsLeftRec(Node* pNode1, Node* pNode2) {
 
 	// if pStatements had a nextlist it sould have already been bapatched in backpatchStatements()
 	p->nextlist = pStatement->nextlist;
-
+	p->continueList = codeBuffer.merge(pStatement->continueList, pStatements->continueList);
+	p->breakList = codeBuffer.merge(pStatement->breakList, pStatements->breakList);
 	return p;
 }
 
