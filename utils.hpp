@@ -230,7 +230,7 @@ void end_global_prog();
 //====================== Buffer printers ============================
 void emitFuncDef(RetType* type, Id* id, Formals* f);
 void emitFuncEnd(TypeN type);
-void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args);
-
+string emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args);
+string to_llvm_retType(TypeN type);
 
 #endif // !_UTILS

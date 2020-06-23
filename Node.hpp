@@ -104,6 +104,7 @@ public:
 //========================== Call ======================================
 class Call : public Node {
 public:
+    string function_call_string;
     Call(TypeN type) : Node(type) {}
 };
 //========================= Statement =================================

@@ -259,8 +259,14 @@ Exp* expFromId(Node* pId) {
 
 Exp* expFromCall(Node* pCall) {
 	CAST_PTR(Call, call, pCall);
-	// TODO: implement
-	auto* p = new Exp(call->getType());
+	stringstream code;
+	string place = newTemp();
+	
+	auto* p = new Exp(call->getType(), place);
+
+	code << place << " = " << call->function_call_string;
+	codeBuffer.emit(code.str());
+	
 	registerNode(p);
 	return p;
 }
@@ -474,7 +480,7 @@ Call* call(Node* pId, Node* pExpList) {
 		}
 	}
 	auto* p = new Call(getFuncType(id));
-	emitFunctionCall(getFuncType(id), id->getName(), recievedExpressions);
+	p->function_call_string = emitFunctionCall(getFuncType(id), id->getName(), recievedExpressions);
 	//TODO: need to emit: call function.ret_type function.arg_types function.name function.arg_list
 	registerNode(p);
 	return p;
@@ -489,6 +495,8 @@ Call* call(Node* pId) {
 		throw errorPrototypeMismatchException(argString, id->getName());
 	}
 	auto* p = new Call(getFuncType(id));
+	vector<Exp*> dummy;
+	p->function_call_string = emitFunctionCall(getFuncType(id), id->getName(), dummy);
 	registerNode(p);
 	return p;
 }
@@ -569,11 +577,12 @@ Statement* statementAssign(Node* pNode1, Node* pNode2) {
 }
 
 Statement* statementCall(Node* pCall) {
-	// TODO: implement
-	assert(pCall);
-	assert(checkPtr<Call>(pCall));
+	CAST_PTR(Call, call, pCall);
+
+	codeBuffer.emit(call->function_call_string);
 
 	auto* p = new Statement();
+
 	registerNode(p);
 	return p;
 }
@@ -584,6 +593,7 @@ Statement* statementReturn() {
 		throw errorMismatchException();
 	}
 	auto* p = new Statement();
+	codeBuffer.emit("ret void");
 	registerNode(p);
 	return p;
 }
@@ -596,6 +606,9 @@ Statement* statementReturn(Node* pNode) {
 		throw errorMismatchException();
 	}
 	auto* p = new Statement();
+	stringstream code;
+	code << "ret " << to_llvm_retType(pExp->getType()) << pExp->place;
+	codeBuffer.emit(code.str());
 	registerNode(p);
 	return p;
 }
@@ -968,7 +981,7 @@ void end_global_prog() {
 }
 
 //====================== Buffer printers ============================
-static inline string to_llvm_retType(TypeN type) {
+string to_llvm_retType(TypeN type) {
 	switch (type) {
 		case TypeN::INT:
 			return "i32 ";
@@ -1031,14 +1044,10 @@ string loadValueToReg (string address_reg) {
 	return value_reg;
 }
 
-void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args) {
+string emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args) {
 	std::stringstream code;
 	std::stringstream args_list;
-	code << "call ";
-	code << to_llvm_retType(retType);
-	code << "@";
-	code << id;
-	code << " (";
+	code << "call " << to_llvm_retType(retType) << "@" << id << " (";
 	bool skip_comma = true;
 	for (Exp* p : recieved_args) {
 		if (!skip_comma) {
@@ -1047,14 +1056,13 @@ void emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args) {
 		if (p->getType() == TypeN::STRING) {
 			//Single argument - pointer to global string varible
 			args_list << "i8* getelementptr([" << p->n_bytes << " x i8], [" << p->n_bytes << " x i8]* " << p->place <<", i32 0, i32 0)";
-		}
-		if (p->getType() == TypeN::INT) {
+		} else {
 			args_list << "i32 " << p->place;
 		}
 		skip_comma = false;
-	}
+	}	
 	code << args_list.str();
 	code << ")";
-	codeBuffer.emit(code.str());
+	return code.str();
 }
 	
