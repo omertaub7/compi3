@@ -109,12 +109,16 @@ public:
 //========================= Statement =================================
 class Statement : public Node {
 public:
+    BackpatchList continueList;
+    BackpatchList breakList;
     BackpatchList nextlist;
 };
 
 //========================= Statements ================================
 class Statements : public Node {
 public:
+    BackpatchList continueList;
+    BackpatchList breakList;
     BackpatchList nextlist;
 };
 

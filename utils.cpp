@@ -626,11 +626,11 @@ Statement* statementIfElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
 	return p;
 }
 
-Statement* statementWhileElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
+/*Statement* statementWhileElse(Node* Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
 	Node* pM2, Node* pStatement2, Node* pN2) {
 	// TODO:
 	return NULL;
-}
+}*/
 
 Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
 	// TODO: implemnet
@@ -654,9 +654,38 @@ Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
 	return p;
 }
 
-Statement* statementWhile(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
-	// TODO: implement
-	return NULL;
+Statement* statementWhile(Node* pN, Node* pM1, Node* pExp, Node* pM2, Node* pStatement, Node* pN2) {
+	CAST_PTR(Exp, exp, pExp);
+	CAST_PTR(M, m1, pM1);
+	CAST_PTR(M, m2, pM2);
+	CAST_PTR(Statement, statement, pStatement);
+	CAST_PTR(N, n1, pN);
+	CAST_PTR(N, n2, pN2);
+	
+	if (!isBool(exp)) {
+		throw errorMismatchException();
+	}
+	auto* p = new Statement();
+	registerNode(p);
+
+	string label_1 = m1->label;
+	string label_2 = m2->label;
+
+	string label_3 = codeBuffer.genLabel();
+	codeBuffer.emit("br label %" + label_1);
+
+	string label_4 = codeBuffer.genLabel();
+	codeBuffer.bpatch(n1->nextlist, label_1);
+	codeBuffer.bpatch(n2->nextlist, label_3);
+	// backpatch the truelist of exp to go into the statement
+	codeBuffer.bpatch(exp->falselist, label_4); 
+	codeBuffer.bpatch(exp->truelist, label_2);
+	// backpatch the break statements to end of while loop and continue statements back to bool exp evaluation
+	codeBuffer.bpatch(statement->continueList, label_1);
+	codeBuffer.bpatch(statement->breakList, label_4);
+	codeBuffer.bpatch(statement->nextlist, label_4);
+	
+	return p;
 }
 
 Statement* statementBreak() {
@@ -665,6 +694,9 @@ Statement* statementBreak() {
 		throw errorUnexpectedBreakException();
 	}
 	auto* p = new Statement();
+	int buffer_index = codeBuffer.emit("br label @");
+	BackpatchList breakList = codeBuffer.makelist({buffer_index, FIRST});
+	p->breakList = breakList;
 	registerNode(p);
 	return p;
 }
@@ -674,8 +706,11 @@ Statement* statementContinue() {
 	if (!inWhile()) {
 		throw errorUnexpectedContinueException();
 	}
+	int buffer_index = codeBuffer.emit("br label @");
+	BackpatchList continueList = codeBuffer.makelist({buffer_index, FIRST});
 	auto* p = new Statement();
 	registerNode(p);
+	p->continueList = continueList;
 	return p;
 }
 
@@ -688,7 +723,8 @@ Statements* statementsEnd(Node* pNode) {
 	registerNode(p);
 
 	p->nextlist = pStatement->nextlist;
-	
+	p->continueList = pStatement->continueList;
+	p->breakList = pStatement->breakList;
 	return p;
 }
 

@@ -89,10 +89,10 @@ Statement:		LBRACE EnterScope Statements ExitScope RBRACE {$$ = statementList($3
 			|	IF LPAREN Exp RPAREN EnterScope M Statement N ExitScope ELSE EnterScope M Statement N ExitScope
 				{$$ = statementIfElse($3, $6, $7, $8, $12, $13, $14);}
 			|	IF LPAREN Exp RPAREN EnterScope M Statement N ExitScope {$$ = statementIf($3, $6, $7, $8);}
-			|	WHILE LPAREN Exp RPAREN EnterWhile EnterScope M Statement N ExitScope ExitWhile ELSE EnterScope M Statement N ExitScope 
-				{$$ = statementWhileElse($3, $7, $8, $9, $14, $15, $16);}
-			|   WHILE LPAREN Exp RPAREN EnterWhile EnterScope M Statement N ExitScope ExitWhile
-				{$$ = statementWhile($3, $7, $8, $9);}
+			|	WHILE LPAREN N M Exp RPAREN EnterWhile EnterScope M Statement N ExitScope ExitWhile ELSE EnterScope M Statement ExitScope 
+				{/*$$ = statementWhileElse($3, $4, $8, $9, $10, $15, $16, $17);*/}
+			|   WHILE LPAREN N M Exp RPAREN EnterWhile EnterScope M Statement N ExitScope ExitWhile
+				{$$ = statementWhile($3, $4, $5, $9, $10, $11);}
 			|	BREAK SC {$$ = statementBreak();}
 			|	CONTINUE SC {$$ = statementContinue();}
 ;

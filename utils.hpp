@@ -146,12 +146,12 @@ Statement* statementReturn(Node* pExp);
 Statement* statementIfElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
 	Node* pM2, Node* pStatement2, Node* pN2);
 // Statement -> WHILE ( Exp ) Statement ELSE Statement
-Statement* statementWhileElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
-	Node* pM2, Node* pStatement2, Node* pN2);
+/*Statement* statementWhileElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
+	Node* pM2, Node* pStatement2, Node* pN2);*/
 // Statement -> IF ( Exp ) Statement
 Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN);
 // Statement -> WHILE ( Exp ) Statement
-Statement* statementWhile(Node* pExp, Node* pM, Node* pStatement, Node* pN);
+Statement* statementWhile(Node* pN1, Node* pM1, Node* pExp, Node* pM2, Node* pStatement, Node* pN2);
 // Statement -> BREAK ;
 Statement* statementBreak();
 // Statement -> CONTINUE ;
