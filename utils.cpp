@@ -201,7 +201,7 @@ Exp* expFromBinop(Node* pExp1, Node* pExp2, BinOp op) {
 	case BinOp::PLUS:	opcode = "add"; break;
 	case BinOp::MINUS:	opcode = "sub"; break;
 	case BinOp::MUL:	opcode = "mul"; break;
-	case BinOp::DIV:	opcode = "sdiv"; break;
+	case BinOp::DIV:	opcode = "sdiv"; break; //TODO: Print error of division by zero
 	}
 
 	if (type == TypeN::INT) {
@@ -643,11 +643,63 @@ Statement* statementIfElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
 	return p;
 }
 
-/*Statement* statementWhileElse(Node* Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
-	Node* pM2, Node* pStatement2, Node* pN2) {
-	// TODO:
-	return NULL;
-}*/
+
+//WHILE LPAREN N M Exp RPAREN EnterWhile EnterScope M Statement N ExitScope ExitWhile ELSE EnterScope M Statement N ExitScope
+/*
+Evaluation_label: 
+	//Evaluate bool exp
+	br i1 %temp label %while_block_label, label %else_block_label
+while_block_label:
+	//Statements of the while block
+		//Break statements goto end_else_label
+		//Continue statements goto evaluation_label
+ 	br evaluation_label
+else_block_label:
+	//Statements of the else block
+	br end_else_label
+end_else_label:
+	//Next code statements
+*/
+Statement* statementWhileElse(Node* pN1, Node* pM1, Node* pExp, Node* pM2, Node* pStatements1,
+	Node* pN2, Node* pM3, Node* pStatements2, Node* pN3) {
+	CAST_PTR(N, n1, pN1);
+	CAST_PTR(M, m1, pM1);
+	CAST_PTR(Exp, exp, pExp);
+	CAST_PTR(M, m2, pM2);
+	CAST_PTR(Statement, statements1, pStatements1);
+	CAST_PTR(N, n2, pN2);
+	CAST_PTR(M, m3, pM3);
+	CAST_PTR(Statement, statements2, pStatements2);
+	CAST_PTR(N, n3, pN3);
+
+	if (!isBool(exp)) {
+		throw errorMismatchException();
+	}
+
+	auto* p = new Statement();
+	registerNode(p);
+
+	string evaluation_label = m1->label; 
+	string while_block_label = m2->label;
+	string else_block_label = m3->label;
+	string end_else_label = codeBuffer.genLabel();
+
+
+	codeBuffer.bpatch(exp->falselist, else_block_label);
+	codeBuffer.bpatch(exp->truelist, while_block_label);
+	
+	codeBuffer.bpatch(n2->nextlist, evaluation_label);
+	codeBuffer.bpatch(n1->nextlist, evaluation_label);
+	codeBuffer.bpatch(n3->nextlist, end_else_label);
+
+	codeBuffer.bpatch(statements1->breakList, end_else_label);
+	codeBuffer.bpatch(statements1->continueList, evaluation_label);
+	codeBuffer.bpatch(statements1->nextlist, else_block_label);
+	codeBuffer.bpatch(statements2->nextlist, end_else_label);
+	codeBuffer.bpatch(statements2->nextlist, end_else_label);
+
+	return p;
+}
 
 Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
 	// TODO: implemnet
