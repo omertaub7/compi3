@@ -189,7 +189,9 @@ int main() {
 		errorByteTooLarge(yylineno, e.getValue());
 	}
 
+	if (value >= 0) {
+		end_global_prog();
+	}
 	clearMemory();
-	end_global_prog();
 	return value;
 }

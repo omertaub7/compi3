@@ -562,6 +562,9 @@ Statement* statementAssign(Node* pNode1, Node* pNode2) {
 	CAST_PTR(Id, pId, pNode1);
 	CAST_PTR(Exp, pExp, pNode2);
 	
+	if (!symbolTable->checkVarExists(pId->getName())) {
+		throw errorUndefException(pId->getName());
+	}
 	if (! checkAssign(getIdType(pId), pExp->getType())) {
 		throw errorMismatchException();
 	}

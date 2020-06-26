@@ -5,12 +5,8 @@ using std::endl;
 
 void GlobalSymbolTable::insertVarible(string id, TypeN type) {
     //No Shadowing, first make sure that the new var does not exist in previous scopes
-    for (Scope& s : scope_stack) { //all scopes loop
-        for (const VarOffset& p : s) { //Current scope loop
-            if ((p.first).getName() == id) {
-                throw errorDefException(id);
-            }
-        }
+    if (checkNameExists(id)) {
+        throw errorDefException(id);
     }
     assert(offsets.size() > 0);
     int offset = offsets.back();
@@ -48,10 +44,8 @@ void GlobalSymbolTable::popScope() {
 }
 
 void GlobalSymbolTable::insertFunction(RetType* t, Id* id, Formals* args) {
-    for (FuncDecl& f : functions) {
-        if (f.getName() == id->getName()) {
-            throw errorDefException(id->getName());
-        }
+    if (checkFunctionExists(id->getName())) {
+        throw errorDefException(id->getName());
     }
     FuncDecl func = FuncDecl(t, id, args);
     functions.push_back(func);
@@ -61,6 +55,9 @@ void GlobalSymbolTable::insertFunction(RetType* t, Id* id, Formals* args) {
         string name = argTypes[i].first;
         TypeN type = argTypes[i].second;
         Node n = Node(name, type);
+        if (checkNameExists(name)) {
+            throw errorDefException(name);
+        }
         function_scope.push_back(VarOffset(n, -1*(i+1)));
     }
     scope_stack.push_back(function_scope);
@@ -157,4 +154,30 @@ int GlobalSymbolTable::getVaribleOffset(string name) {
             }
         }
     }   
+}
+
+bool GlobalSymbolTable::checkNameExists(string name) {
+    if (checkVarExists(name)) return true;
+    if (checkFunctionExists(name)) return true;
+    return false;
+}
+
+bool GlobalSymbolTable::checkVarExists(string name) {
+    for (Scope& s : scope_stack) { //all scopes loop
+        for (const VarOffset& p : s) { //Current scope loop
+            if ((p.first).getName() == name) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+bool GlobalSymbolTable::checkFunctionExists(string name) {
+    // check that the variable is not declared as a function
+    for (FuncDecl& f : functions) {
+        if (f.getName() == name) {
+            return true;
+        }
+    }
+    return false;
 }

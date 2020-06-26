@@ -48,6 +48,10 @@ public:
     void setCurrentReturnType(TypeN t);
 
     int getVaribleOffset(string name);
+
+    bool checkNameExists(string name);
+    bool checkVarExists(string name);
+    bool checkFunctionExists(string name);
 };
 
 #endif
