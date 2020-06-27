@@ -1,0 +1,19 @@
+// testing int return value of functions
+int f(int x, int y) {
+	return (x + y);
+}
+
+int g(int x, int y) {
+	int z = x;
+	int w = x + y;
+	z = z + w;
+}
+
+void main() {
+	int x = 10;
+	int y = 15;
+	int z = f(x, y);
+	printi(z);
+	z = g(x, y);
+	printi(z);
+}

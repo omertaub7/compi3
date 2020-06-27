@@ -216,9 +216,13 @@ void exitWhile();
 void enterScope();
 void exitScope();
 
+//===================== function arguments evaluation =============
+// if a bool expression is passed to a function than its value is needed to be evaluated
+// before it is passed.
+// this needs to act in the middle of the rule becasue of the derivation order of right recursion
+void evaluateExp(Node* pExp);
+
 //====================== Functions handler ============================
-// in addition, will backpatch any unresolved backpatching and will return a default value
-void exitFunc(Node* pStatements);
 void setReturnType(Node* retType);
 void addFunc(Node* retType, Node* ID, Node* Formals);
 
@@ -229,8 +233,6 @@ void end_global_prog();
 
 //====================== Buffer printers ============================
 void emitFuncDef(RetType* type, Id* id, Formals* f);
-void emitFuncEnd(TypeN type);
-string emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args);
 string to_llvm_retType(TypeN type);
 
 #endif // !_UTILS

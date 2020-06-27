@@ -12,7 +12,6 @@ void GlobalSymbolTable::insertVarible(string id, TypeN type) {
     int offset = offsets.back();
     Node n = Node(id, type);
     (scope_stack.back()).push_back(VarOffset(n, offset+1)); //Push to the end of current scope with offset+1
-    assert(offsets.size() > 0);
     offsets.pop_back(); //Update last offset to be incremented by 1
     offsets.push_back(offset+1);
 }
@@ -180,4 +179,23 @@ bool GlobalSymbolTable::checkFunctionExists(string name) {
         }
     }
     return false;
+}
+
+void GlobalSymbolTable::make_parameter_writeable(string name) {
+    assert(offsets.size() > 0);
+    int new_offset = ++offsets.back();
+        
+    //Go on all varibles in avaliable Scopes
+    for (Scope& s : scope_stack) { //all scopes loop
+        for (VarOffset& p : s) { //Current scope loop
+            if ((p.first).getName() == name) {
+                p.second = new_offset;
+                return;
+            }
+        }
+    }
+    assert(false);  // should not get here
+    return;
+    
+    
 }

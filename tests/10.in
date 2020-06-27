@@ -1,0 +1,24 @@
+// writing to a function's parameter
+int f(int x, int y) {
+	x = x + y;
+	return x;
+}
+
+void main() {
+	int z = f(5, 10);
+	if (z == 15) {
+		print("GOOD");
+	}
+	else {
+		print("BAD");
+	}
+	int x = 300;
+	int y = z + x; // = 315
+	z = f(x, y);
+	if (z == 615) {
+		print("GOOD");
+	}
+	else {
+		print("BAD");
+	}
+}

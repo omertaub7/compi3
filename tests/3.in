@@ -1,0 +1,21 @@
+// check bool assignment
+void main() {
+	int x = 10;
+	int y = 20;
+	int z = 12;
+	bool t = ((x + y > z) and (z < y) and (x == y - 10));
+	if (t) {
+		print("GOOD");
+	}
+	else {
+		print("BAD");
+	}
+	t = (false or (x + y <= z));
+	if (t) {
+		print("BAD");
+	}
+	else {
+		print("GOOD");
+	}
+	return;
+}

@@ -62,7 +62,7 @@ Program: 		Funcs {$$ = program($1);}
 Funcs:			/*epsilon*/ {$$ = funcs();}
 			|	FuncDecl Funcs {$$ = funcsRightRec($1, $2);}
 ;
-FuncDecl:		RetType ID LPAREN Formals RPAREN {setReturnType($1); addFunc($1, $2, $4);} LBRACE Statements {exitFunc($8);} RBRACE 
+FuncDecl:		RetType ID LPAREN Formals RPAREN {setReturnType($1); addFunc($1, $2, $4);} LBRACE Statements RBRACE 
 				{$$ = funcDecl($1, $2, $4, $8);}
 ;
 RetType:		Type {$$ = retType($1);}
@@ -99,8 +99,8 @@ Statement:		LBRACE EnterScope Statements ExitScope RBRACE {$$ = statementList($3
 Call:			ID LPAREN ExpList RPAREN {$$ = call($1, $3);}
 			|	ID LPAREN RPAREN {$$ = call($1);}
 ;
-ExpList:		Exp {$$ = expListFromExp($1);}
-			|	Exp COMMA ExpList {$$ = expListRightRec($1, $3);}
+ExpList:		Exp {evaluateExp($1);} {$$ = expListFromExp($1);}
+			|	Exp {evaluateExp($1);} COMMA ExpList {$$ = expListRightRec($1, $4);}
 ;
 Type:			INT {$$ = typeInt();}
 			|	BYTE {$$ = typeByte();}
@@ -140,6 +140,7 @@ EnterScope:	/*epsilon*/ {enterScope();}
 
 ExitScope: /*epsilon*/  {exitScope();}
 ;
+
 %%
 
 void yyerror(const char* msg) {

@@ -1,5 +1,4 @@
 #include "utils.hpp"
-// TODO: do we even have to keep the hierarchy of the Nodes?
 
 // for casting and testing for exact linenumber in assert
 #define CAST_PTR(T, p_dst, p_src) assert((p_src));\
@@ -12,6 +11,104 @@ int nestedWhileCounter = 0;
 
 GlobalSymbolTable* symbolTable;
 CodeBuffer& codeBuffer = CodeBuffer::instance();
+
+//======================= static functions ================
+static string to_llvm_type(TypeN type) {
+	switch (type)
+	{
+	case TypeN::VOID:
+		return "void";
+		break;
+	case TypeN::BOOL:
+		return "i1";
+		break;
+	case TypeN::INT:
+		//break;
+	case TypeN::BYTE:
+		return "i32";
+		break;
+	case TypeN::STRING:
+		// break;
+	default:
+		assert(false); // should not get here
+		break;
+	}
+	return "";
+}
+
+// creates a branch comand on a condition(cond), with false and true lists of the conditional expression
+static void brOnCond(string cond, Exp* boolExp) {
+	assert(isBool(boolExp));
+	int buffer_index = codeBuffer.emit("br i1 " + cond + ", label @, label @");
+	boolExp->truelist = codeBuffer.makelist({ buffer_index, FIRST });
+	boolExp->falselist = codeBuffer.makelist({ buffer_index, SECOND });
+}
+
+// evaluates a bool expression to a register, made for 
+// sets place attribute the expression's value
+static void evaluateBoolExp(Exp* boolExp, TypeN output_type = TypeN::BOOL) {
+	assert(isBool(boolExp));
+	// TODO: avoid double evaluating. if it's place is not empty then it might be already evaluated
+	string assign_label = newLabel();
+	string br_to_assign = "br label %" + assign_label;
+
+	string false_label = codeBuffer.genLabel();
+	codeBuffer.emit(br_to_assign);
+	string true_label = codeBuffer.genLabel();
+	codeBuffer.emit(br_to_assign);
+
+	codeBuffer.emit(assign_label + ":");
+	boolExp->place = newTemp();
+	string type = to_llvm_type(output_type);
+	string phi_code = boolExp->place + " = phi " + type + " [ 0, %" + false_label + " ], [ 1, %" + true_label + " ]";
+	codeBuffer.emit(phi_code);
+
+	codeBuffer.bpatch(boolExp->truelist, true_label);
+	codeBuffer.bpatch(boolExp->falselist, false_label);
+}
+
+// stores a value of exp into id, assumes that they are from the correct types and that id is a variable that 
+// exists
+static void storeVarFromExp(Id* id, Exp* exp) {
+	// in case of boolean variables, we need to branch to assign 1 or 0
+	// and to convert them to i32 to put in stack
+	if (isBool(exp)) {
+		evaluateBoolExp(exp, TypeN::INT);
+	}
+	string ptr = getVarPtr(id);
+	codeBuffer.emit("store i32 " + exp->place + ", i32* " + ptr);
+}
+
+// creates a string to call a function in llvm
+static string functionCall(Id* id) {
+	assert(id);
+	TypeN ret_type = getFuncType(id);
+
+	return "call " + to_llvm_type(ret_type) + "@" + id->getName() + " ()";
+}
+
+static string functionCall(Id* id, vector<Exp*>& recieved_args) {
+	assert(id);
+	TypeN ret_type = getFuncType(id);
+	stringstream call_code;
+	
+	call_code << "call " + to_llvm_type(ret_type) + "@" + id->getName() + " ( ";
+	bool comma = false;
+	for (Exp* p : recieved_args) {
+		if (comma) {
+			call_code << ", ";
+		}
+		if (p->getType() == TypeN::STRING) {
+			call_code << "i8* getelementptr([" << p->n_bytes << " x i8], [" << p->n_bytes << " x i8]* " << p->place << ", i32 0, i32 0)";
+		}
+		else {
+			call_code << to_llvm_type(p->getType()) <<" " << p->place;
+		}
+		comma = true;
+	}
+	call_code << ")";
+	return call_code.str();
+}
 
 //==========================Utils=========================
 TypeN getIdType(Node* id) {
@@ -203,22 +300,19 @@ Exp* expFromBinop(Node* pExp1, Node* pExp2, BinOp op) {
 	case BinOp::MUL:	opcode = "mul"; break;
 	case BinOp::DIV:	opcode = "sdiv"; break; //TODO: Print error of division by zero
 	}
-
+	// zero divide
+	if (op == BinOp::DIV) {
+		codeBuffer.emit("call void @check_zero_div(i32 " + exp2->place + ")");
+	}
 	if (type == TypeN::INT) {
-		stringstream code;
-		code << p->place << " = " << opcode << " i32 " << exp1->place << ", " << exp2->place;
-		codeBuffer.emit(code.str());
+		codeBuffer.emit(p->place + " = " + opcode + " i32 " + exp1->place + ", " + exp2->place);
 	}
 	// deal with overflow in the case of byte
 	else {
 		string temp = newTemp();
-		stringstream temp_code;
-		temp_code << temp << " = " << opcode << " i32 " << exp1->place << ", " << exp2->place;
-		stringstream code;
-		// clear the upper bits
-		code << p->place << " = and i32 255, " << temp;		
-		codeBuffer.emit(temp_code.str());
-		codeBuffer.emit(code.str());
+		codeBuffer.emit(temp + " = " + opcode + " i32 " + exp1->place + ", " + exp2->place);
+		// truncate
+		codeBuffer.emit(p->place + " = and i32 255, " + temp);
 	}
 	return p; 
 }
@@ -228,46 +322,49 @@ Exp* expFromId(Node* pId) {
 
 	TypeN type = getIdType(id);
 	int offset = symbolTable->getVaribleOffset(id->getName());
-	string place;
+	
+	auto* p = new Exp(type);
+	registerNode(p);
+
 	// in function arguments
 	if (offset < 0) {
 		int arg_number = (offset * -1) - 1;
-		place = "%";
-		place += to_string(arg_number);
+		p->place = "%" + to_string(arg_number);
 	}
 	// in stack
 	else {
-		place = newTemp();
+		p->place = newTemp();
 		string ptr = getVarPtr(offset);
-		stringstream load_code;
-		load_code << place << " = load i32, i32* " << ptr;
-		codeBuffer.emit(load_code.str());
-		// in case it is bool need to conver it to i1
+		codeBuffer.emit(p->place + " = load i32, i32* " + ptr);
+		// if needs to convert to i1
 		if (type == TypeN::BOOL) {
 			string temp = newTemp();
-			stringstream convert_code;
-			convert_code << temp << " = trunc i32 " << place << " to i1";
-			place = temp;
-			codeBuffer.emit(convert_code.str());
+			codeBuffer.emit(temp + " = trunc i32 " + p->place + " to i1");
+			p->place = temp;
 		}
 	}
+	// make the true and false list, and branch
+	if (type == TypeN::BOOL) {
+		brOnCond(p->place, p);
+	}
 	
-	auto* p = new Exp(type, place);
-	registerNode(p);
 	return p;
 }
 
 Exp* expFromCall(Node* pCall) {
 	CAST_PTR(Call, call, pCall);
 	stringstream code;
-	string place = newTemp();
-	
-	auto* p = new Exp(call->getType(), place);
 
-	code << place << " = " << call->function_call_string;
-	codeBuffer.emit(code.str());
-	
+	auto* p = new Exp(call->getType(), newTemp());
 	registerNode(p);
+
+	codeBuffer.emit(p->place + " = " + call->function_call_string);
+
+	// if it is bool then we want to add to it a true and false list
+	if (isBool(p)) {
+		brOnCond(p->place, p);
+	}
+	
 	return p;
 }
 
@@ -316,11 +413,13 @@ Exp* expFromBool(bool b) {
 	auto* p = new Exp(TypeN::BOOL);
 	registerNode(p);
 
-	stringstream br_code;
-	br_code << "br i1 " << b << ", label @, label @";
-	int buffer_index = codeBuffer.emit(br_code.str());
-	p->truelist = codeBuffer.makelist({ buffer_index, FIRST });
-	p->falselist = codeBuffer.makelist({ buffer_index, SECOND });
+	int buffer_index = codeBuffer.emit("br label @");
+	if (b) {
+		p->truelist = codeBuffer.makelist({ buffer_index, FIRST });
+	}
+	else {
+		p->falselist = codeBuffer.makelist({ buffer_index, FIRST });
+	}
 
 	return p;
 }
@@ -373,6 +472,8 @@ Exp* expFromLogicop(Node* pExp1, Node* pM, Node* pExp2, LogicOp op) {
 	return p;
 }
 
+
+
 Exp* expFromRelop(Node* pExp1, Node* pExp2, Node* pExp3) {
 	CAST_PTR(Exp, exp1, pExp1);
 	CAST_PTR(RelOperator, rel_op, pExp2);
@@ -414,11 +515,7 @@ Exp* expFromRelop(Node* pExp1, Node* pExp2, Node* pExp3) {
 	stringstream icmp_code;
 	icmp_code << temp << " = icmp " << op << " i32 " << exp1->place << ", " << exp2->place;
 	codeBuffer.emit(icmp_code.str());
-	stringstream br_code;
-	br_code << "br i1 " << temp << ", label @, label @";
-	int buffer_index = codeBuffer.emit(br_code.str());
-	p->truelist = codeBuffer.makelist({ buffer_index, FIRST });
-	p->falselist = codeBuffer.makelist({ buffer_index, SECOND });
+	brOnCond(temp, p);
 
 	return p;
 }
@@ -443,28 +540,28 @@ Type* typeBool() {
 }
 
 //=======================Exp List Rules =======================
-// ExpList -> Exp
+
 ExpList* expListFromExp(Node* pExp) {
 	CAST_PTR(Exp, exp, pExp);
 
 	auto* p = new ExpList(exp);
 	registerNode(p);
+
 	return p;
 }
 
-// ExpList -> Exp COMMA ExpList
 ExpList* expListRightRec(Node* pExp, Node* pExpList) {
 	CAST_PTR(Exp, exp, pExp);
 	CAST_PTR(ExpList, expList, pExpList);
 
 	auto* p = new ExpList(exp, expList);
 	registerNode(p);
+
 	return p;
 }
 
 //========================Call Rules ==========================
 Call* call(Node* pId, Node* pExpList) {
-	// TODO: move out, should be in 'statementCall' or 'expFromCall'
 	CAST_PTR(Id, id, pId);
 	CAST_PTR(ExpList, expList, pExpList);
 
@@ -480,23 +577,25 @@ Call* call(Node* pId, Node* pExpList) {
 		}
 	}
 	auto* p = new Call(getFuncType(id));
-	p->function_call_string = emitFunctionCall(getFuncType(id), id->getName(), recievedExpressions);
-	//TODO: need to emit: call function.ret_type function.arg_types function.name function.arg_list
+
+	p->function_call_string = functionCall(id, recievedExpressions);
+	
+
 	registerNode(p);
 	return p;
 }
 
 Call* call(Node* pId) {
 	CAST_PTR(Id, id, pId);
-	// TODO: implement
+
 	vector<std::pair<string, TypeN>> argTypes = getFuncArgTypes(id);
 	vector<string> argString = typeVecToStringVec(argTypes);
 	if (argTypes.size() != 0) {
 		throw errorPrototypeMismatchException(argString, id->getName());
 	}
 	auto* p = new Call(getFuncType(id));
-	vector<Exp*> dummy;
-	p->function_call_string = emitFunctionCall(getFuncType(id), id->getName(), dummy);
+
+	p->function_call_string = functionCall(id);
 	registerNode(p);
 	return p;
 }
@@ -516,7 +615,6 @@ Statement* statementList(Node* pNode) {
 }
 
 Statement* statementVarDecl(Node* pNode1, Node* pNode2) {
-	// TODO: implement
 	CAST_PTR(Type, pType, pNode1);
 	CAST_PTR(Id, pId, pNode2);
 
@@ -525,15 +623,12 @@ Statement* statementVarDecl(Node* pNode1, Node* pNode2) {
 	registerNode(p);
 	// initialize the new var to 0
 	string ptr = getVarPtr(pId);
-	stringstream init_code;
-	init_code << "store i32 0, i32* " << ptr;
-	codeBuffer.emit(init_code.str());
+	codeBuffer.emit("store i32 0, i32* " + ptr);
 
 	return p;
 }
 
 Statement* statementVarDeclInit(Node* pNode1, Node* pNode2, Node* pNode3) {
-	// TODO: only works for int, implement also for byte and bool
 	CAST_PTR(Type, pType, pNode1);
 	CAST_PTR(Id, pId, pNode2);
 	CAST_PTR(Exp, pExp, pNode3);
@@ -545,15 +640,7 @@ Statement* statementVarDeclInit(Node* pNode1, Node* pNode2, Node* pNode3) {
 	auto* p = new Statement();
 	registerNode(p);
 
-	// store the value of exp in the correct offset
-	int offset = symbolTable->getVaribleOffset(pId->getName());
-	// check that it is not an argument
-	assert(offset >= 0);
-
-	string ptr = getVarPtr(offset);
-	stringstream store_code;
-	store_code << "store i32 " << pExp->place << ", i32* " << ptr;
-	codeBuffer.emit(store_code.str());
+	storeVarFromExp(pId, pExp);
 	
 	return p;
 }
@@ -570,12 +657,15 @@ Statement* statementAssign(Node* pNode1, Node* pNode2) {
 	}
 	auto* p = new Statement();
 	registerNode(p);
-	// TODO: what about assignment to one of the functions argument?
-	// get the local variable address, and store the exp into it
-	string ptr = getVarPtr(pId);
-	stringstream store_code;
-	store_code << "store i32 " << pExp->place << ", i32* " << ptr;
-	codeBuffer.emit(store_code.str());
+
+	// check if it is a parameter, if so, then remove it from the parameters list and copy its value to the stack
+	int offset = symbolTable->getVaribleOffset(pId->getName());
+	if (offset < 0) {
+		symbolTable->make_parameter_writeable(pId->getName());
+	}
+
+	storeVarFromExp(pId, pExp);
+	
 	return p;
 }
 
@@ -602,17 +692,31 @@ Statement* statementReturn() {
 }
 
 Statement* statementReturn(Node* pNode) {
-	// TODO: implement
 	CAST_PTR(Exp, pExp, pNode);
 
 	if (! checkAssign(getCurrFuncType(), pExp->getType())) {
 		throw errorMismatchException();
 	}
 	auto* p = new Statement();
-	stringstream code;
-	code << "ret " << to_llvm_retType(pExp->getType()) << pExp->place;
-	codeBuffer.emit(code.str());
 	registerNode(p);
+
+	// bool need to do branch trick
+	if (isBool(pExp)) {
+		string true_label = codeBuffer.genLabel();
+		codeBuffer.emit("ret i1 1");
+
+		string false_label = codeBuffer.genLabel();
+		codeBuffer.emit("ret i1 0");
+		
+		codeBuffer.bpatch(pExp->falselist, false_label);
+		codeBuffer.bpatch(pExp->truelist, true_label);
+	}
+	else {
+		stringstream code;
+		code << "ret i32 " << pExp->place;
+		codeBuffer.emit(code.str());
+	}
+	
 	return p;
 }
 
@@ -849,13 +953,35 @@ Funcs* funcsRightRec(Node* pNode1, Node* pNode2) {
 //====================== FuncDecl Rules ========================
 
 FuncDecl* funcDecl(Node* pNode1, Node* pNode2, Node* pNode3, Node* pNode4) {
-	CAST_PTR(RetType, pRetType, pNode1);
-	CAST_PTR(Id, pId, pNode2);
-	CAST_PTR(Formals, pFormals, pNode3);
-	CAST_PTR(Statements, pStatements, pNode4);
+	CAST_PTR(RetType, ret_type, pNode1);
+	CAST_PTR(Id, id, pNode2);
+	CAST_PTR(Formals, formals, pNode3);
+	CAST_PTR(Statements, statements, pNode4);
 
-	emitFuncEnd(pRetType->getType());
-	auto* p = new FuncDecl((RetType*)pRetType, (Id*) pId, (Formals*)pFormals);
+	// check if there are any loose edges that need to be backpatched
+	if (statements->nextlist.size() > 0) {
+		string label = codeBuffer.genLabel();
+		codeBuffer.bpatch(statements->nextlist, label);
+	}
+	switch (ret_type->getType()) {
+	case TypeN::VOID:
+		codeBuffer.emit("ret void");
+		break;
+	case TypeN::BOOL:
+		codeBuffer.emit("ret i1 0");
+		break;
+	case TypeN::BYTE:
+	case TypeN::INT:
+		codeBuffer.emit("ret i32 0");
+		break;
+	default:
+		assert(false); // should not get here
+	}
+
+	exitScope();
+	codeBuffer.emit("}");
+
+	auto* p = new FuncDecl(ret_type, id, formals);
 	registerNode(p);
 	return p;
 }
@@ -970,6 +1096,16 @@ void exitScope() {
 	symbolTable->popScope();
 }
 
+//===================== function arguments evaluation =============
+
+void evaluateExp(Node* pExp) {
+	CAST_PTR(Exp, exp, pExp);
+	if (isBool(exp)) {
+		evaluateBoolExp(exp);
+	}
+}
+
+
 void setReturnType(Node* retType) {
 	CAST_PTR(RetType, t, retType);
 	symbolTable->setCurrentReturnType(t->getType());
@@ -1028,6 +1164,18 @@ void init_global_prog() {
  	codeBuffer.emit("call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4x i8]* @.str_specifier, i32 0, i32 0), i8* %0)");
 	codeBuffer.emit("ret void");
     codeBuffer.emit("}");
+	// divide by zero
+	codeBuffer.emit("@.zero_divide_msg = constant [24 x i8] c\"Error division by zero\\0A\\00\"");
+	codeBuffer.emit("define void @check_zero_div(i32) {");
+	codeBuffer.emit("%x = icmp eq i32 0, %0");
+	codeBuffer.emit("br i1 %x, label %zero, label %no_zero");
+	codeBuffer.emit("zero:");
+	codeBuffer.emit("call i32 (i8*, ...) @printf(i8* getelementptr ([24 x i8], [24 x i8]* @.zero_divide_msg, i32 0, i32 0))");
+	codeBuffer.emit("call void @exit(i32 1)");
+	codeBuffer.emit("br label %no_zero");
+	codeBuffer.emit("no_zero:");
+	codeBuffer.emit("ret void");
+	codeBuffer.emit("}");
 }
 
 void end_global_prog() {
@@ -1057,7 +1205,12 @@ void emitFuncDef(RetType* type, Id* id, Formals* f) {
 	code << "@";
 	code << id->getName();
 	code << "(";
+	bool first = true;
 	for (auto p : f->argTypes) {
+		if (!first) {
+			code << ", ";
+		}
+		first = false;
 		code << to_llvm_retType(p.second);
 	}
 	code << ") ";
@@ -1067,27 +1220,6 @@ void emitFuncDef(RetType* type, Id* id, Formals* f) {
 	codeBuffer.emit("%stack = alloca [50 x i32]");
 }
 
-void emitFuncEnd(TypeN type) {
-	//TODO: return the correct value
-	//For now ret void to be able to run
-	switch (type) {
-		case TypeN::VOID:
-			codeBuffer.emit("ret void");
-			break;
-		case TypeN::INT:
-			codeBuffer.emit("ret i32 0");
-			break;
-		case TypeN::BYTE:
-			codeBuffer.emit("ret i8 0");
-			break;
-		case TypeN::BOOL:
-			codeBuffer.emit("ret i1 0");
-			break;
-		default:
-			assert(false);
-	}
-	codeBuffer.emit("}");
-}
 
 string loadValueToReg (string address_reg) {
 	std::stringstream load_statement;
@@ -1097,27 +1229,5 @@ string loadValueToReg (string address_reg) {
 	load_statement << address_reg;
 	codeBuffer.emit(load_statement.str());
 	return value_reg;
-}
-
-string emitFunctionCall(TypeN retType, string id, vector<Exp*>& recieved_args) {
-	std::stringstream code;
-	std::stringstream args_list;
-	code << "call " << to_llvm_retType(retType) << "@" << id << " (";
-	bool skip_comma = true;
-	for (Exp* p : recieved_args) {
-		if (!skip_comma) {
-			args_list << ", ";
-		}
-		if (p->getType() == TypeN::STRING) {
-			//Single argument - pointer to global string varible
-			args_list << "i8* getelementptr([" << p->n_bytes << " x i8], [" << p->n_bytes << " x i8]* " << p->place <<", i32 0, i32 0)";
-		} else {
-			args_list << "i32 " << p->place;
-		}
-		skip_comma = false;
-	}	
-	code << args_list.str();
-	code << ")";
-	return code.str();
 }
 	

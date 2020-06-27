@@ -10,4 +10,6 @@ using std::to_string;
 string newTemp();
 // creates a new globel string identifier 
 string newString();
+// creates a new label
+string newLabel();
 #endif

@@ -1,0 +1,28 @@
+// testing bool return value of functions
+bool f(bool x, bool y) {
+	return (x and y);
+}
+
+bool g(int x, int y) {
+	int z = x;
+	int w = x + y;
+	z = z + w;
+}
+
+void main() {
+	int x = 10;
+	int y = 15;
+	bool z = f(true, true);
+	if (z) {
+		print("GOOD");
+	}
+	else {
+		print("BAD");
+	}
+	if (true and g(x, y)) {
+		print("BAD");
+	}
+	else {
+		print("GOOD");
+	}
+}

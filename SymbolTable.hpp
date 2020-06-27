@@ -52,6 +52,9 @@ public:
     bool checkNameExists(string name);
     bool checkVarExists(string name);
     bool checkFunctionExists(string name);
+
+    // for removing a parameter, for writing to it
+    void make_parameter_writeable(string name);
 };
 
 #endif

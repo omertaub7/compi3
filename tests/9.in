@@ -1,0 +1,7 @@
+// overflow divide by zero
+void main() {
+	byte xb = 10b;
+	byte yb = 246b;
+	byte zb = xb / (yb + xb);
+	printi(zb);
+}

@@ -14,3 +14,4 @@ Debug/*
 machine_code.llvm
 .vs/*
 fake_maincpp.cpp
+x64/*
