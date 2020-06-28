@@ -1,0 +1,23 @@
+// different types passed into the function
+byte byteFunc(byte x, byte y, int z, bool w) {
+	if (w) {
+		if (x - y < z) {
+			return y - x;
+		}
+		else {
+			return x - y;
+		}
+	}
+	else {
+		return x * y;
+	}
+}
+
+void main() {
+	byte x = byteFunc(10b, 5b, 4, true); // 5b
+	printi(x); // 5
+	byte y = byteFunc(10b, 7b, 4b, true); // 253b
+	printi(y); // 253
+	byte z = byteFunc(100b, 2b, 300 + 2b, (10 == 11));
+	printi(z); // 200
+}

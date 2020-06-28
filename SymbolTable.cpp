@@ -180,22 +180,3 @@ bool GlobalSymbolTable::checkFunctionExists(string name) {
     }
     return false;
 }
-
-void GlobalSymbolTable::make_parameter_writeable(string name) {
-    assert(offsets.size() > 0);
-    int new_offset = ++offsets.back();
-        
-    //Go on all varibles in avaliable Scopes
-    for (Scope& s : scope_stack) { //all scopes loop
-        for (VarOffset& p : s) { //Current scope loop
-            if ((p.first).getName() == name) {
-                p.second = new_offset;
-                return;
-            }
-        }
-    }
-    assert(false);  // should not get here
-    return;
-    
-    
-}

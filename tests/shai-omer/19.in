@@ -1,0 +1,11 @@
+// writing to function arguments
+int f(int x) {
+	x = x + 1;
+	return x;
+}
+
+void  main () {
+	int x = 20;
+	int y = f(f(f(x)));
+	printi(y); // 23
+}

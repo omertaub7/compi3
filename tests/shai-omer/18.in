@@ -1,0 +1,17 @@
+// parameter evaluating order from left to right
+int f(int x, int y, int z) {
+	return x + y + z;
+}
+
+int g(int x) {
+	printi(x);
+	return x;
+}
+
+void main() {
+	int x = 1;
+	int y = 2;
+	int z = 3;
+	int w = f(g(x), g(y), g(z)); // 1, 2, 3
+	printi(w); // 6
+}

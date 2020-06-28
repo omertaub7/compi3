@@ -1,0 +1,41 @@
+// complicated break
+void f() {
+	int x = 2;
+	while (x != 0 and true and x < 20) {
+		if (x == 2 and x != 20) {
+			print("GOOD");
+			break;
+		}
+		if (x == 1) {
+			print("BAD");
+		}
+		x = x - 1;
+	}
+	else {
+		print("BAD");
+	}
+}
+bool g(bool x) {
+	return not x;
+}
+
+void main() {
+	f();
+	byte x = 0 b;
+	while (g(x == 10)) {
+		int a = 10;
+		while (a > 0 and a < 11) {
+			if (a == 1) {
+				printi(x);
+			}
+			if (x == 3) {
+				break;
+			}
+			a = a - 1;
+		}
+		x = x + 1 b;
+	} 
+	else {
+		print("GOOD");
+	}
+}

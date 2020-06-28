@@ -1,0 +1,14 @@
+// simple break
+void main () {
+	int x = 3;
+	while (x > 0) {
+		if (x == 1) {
+			break;
+		}
+		printi(x);
+		x = x - 1;
+	}
+	else {
+		print("GOOD");
+	}
+}

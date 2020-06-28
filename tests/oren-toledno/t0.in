@@ -1,0 +1,607 @@
+bool truefunc(){
+	return true;
+}
+
+bool truefuncwithparams(int aaa, bool aab, byte aac, bool aabc){
+	return true;
+}
+
+bool falsefunc(){
+	return false;
+}
+
+bool falsefuncwithparams(int caaa, bool caab, byte caac, bool caabc){
+	return false;
+}
+
+void contCheck(){
+	int a;
+	int bu = 1;
+	while(bu > 0){
+		printi(0);
+		if(a == bu){
+			continue;
+			print("Error");
+		}
+		if(falsefunc() and truefunc()){
+			continue;
+			print("Error");
+		}
+		else
+			printi(1);
+		while(bu != 0 ){
+			if(not( 4+5 == 9) ){
+				print("Error");
+			}else if(bu == 0){
+				continue;
+			}else{
+				bu = bu-1;
+				continue;
+				print("Error");
+			}
+		}else{
+			continue;
+			print("Error");
+			int count = 6;
+			while(count != 0){
+				count = count -1;
+				continue;
+				print("Error");
+			}
+		}
+	}else{
+		printi(2);
+	}
+}
+
+
+void ifexpswithboolianfuncsnoparams(){
+	if(falsefunc()){
+		printi(0);
+	}
+	if(falsefunc() or truefunc())
+		printi(1);			//1
+	else
+		printi(11);
+	if(truefunc() or truefunc())
+		printi(2);			//2
+	else
+		printi(22);
+	if(truefunc() and truefunc())
+		printi(3);			//3
+	else
+		printi(3);
+	if(truefunc() and falsefunc())
+		printi(4);
+	else
+		printi(44);			//44		
+	if(truefunc() and (truefunc() and falsefunc()))
+		printi(5);
+	else
+		printi(55);			//55
+	if(truefunc() and (truefunc() and truefunc()))
+		printi(6);			//6
+	else
+		printi(66);
+	if(falsefunc() and (truefunc() and truefunc()))
+		printi(7);			
+	else
+		printi(77);			//77
+	if(falsefunc() or (falsefunc() and truefunc()))
+		printi(8);
+	else
+		printi(88);			//88
+	if(falsefunc() or (falsefunc() or truefunc()))
+		printi(9);			//9
+	else
+		printi(99);
+	if((falsefunc() and falsefunc()) and (truefunc() and truefunc()))
+		printi(10);
+	else
+		printi(1010);		//1010
+	if((truefunc() and truefunc()) and (truefunc() and truefunc()))
+		printi(11);			//11
+	else
+		printi(1111);		
+	if((truefunc() or truefunc()) and (truefunc() and truefunc()))
+		printi(12);			//12
+	else
+		printi(1212);		
+	if((falsefunc() or truefunc()) and (falsefunc() or truefunc()))
+		printi(13);			//13
+	else
+		printi(1313);		
+	if((falsefunc() or truefunc()) or (falsefunc() or falsefunc()))
+		printi(14);			//14
+	else
+		printi(1414);		
+}
+
+void ifexpswithboolianfuncswithparams(){
+	if(falsefuncwithparams(4,true, 7 b, false and (true or not false))){
+		printi(0);
+	}
+	if(falsefuncwithparams(4,true, 7 b, false and (true or not false)) or truefuncwithparams(4,true, 7 b, false and (true or not false)))
+		printi(1);			//1
+	else
+		printi(11);
+	if(truefuncwithparams(4,true, 7 b, false and (true or not false)) or truefuncwithparams(4,true, 7 b, false and (true or not false)))
+		printi(2);			//2
+	else
+		printi(22);
+	if(truefuncwithparams(4,true, 7 b, false and (true or not false)) and truefuncwithparams(4,true, 7 b, false and (true or not false)))
+		printi(3);			//3
+	else
+		printi(3);
+	if(truefuncwithparams(4,true, 7 b, false and (true or not false)) and falsefuncwithparams(4,true, 7 b, false and (true or not false)))
+		printi(4);
+	else
+		printi(44);			//44		
+	if(truefuncwithparams(4,true, 7 b, false and (true or not false)) and (truefuncwithparams(4,true, 7 b, false and (true or not false)) and falsefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(5);
+	else
+		printi(55);			//55
+	if(truefuncwithparams(4,true, 7 b, false and (true or not false)) and (truefuncwithparams(4,true, 7 b, false and (true or not false)) and truefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(6);			//6
+	else
+		printi(66);
+	if(falsefuncwithparams(4,true, 7 b, false and (true or not false)) and (truefuncwithparams(4,true, 7 b, false and (true or not false)) and truefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(7);			
+	else
+		printi(77);			//77
+	if(falsefuncwithparams(4,true, 7 b, false and (true or not false)) or (falsefuncwithparams(4,true, 7 b, false and (true or not false)) and truefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(8);
+	else
+		printi(88);			//88
+	if(falsefuncwithparams(4,true, 7 b, false and (true or not false)) or (falsefuncwithparams(4,true, 7 b, false and (true or not false)) or truefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(9);			//9
+	else
+		printi(99);
+	if((falsefuncwithparams(4,true, 7 b, false and (true or not false)) and falsefuncwithparams(4,true, 7 b, false and (true or not false))) and (truefuncwithparams(4,true, 7 b, false and (true or not false)) and truefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(10);
+	else
+		printi(1010);		//1010
+	if((truefuncwithparams(4,true, 7 b, false and (true or not false)) and truefuncwithparams(4,true, 7 b, false and (true or not false))) and (truefuncwithparams(4,true, 7 b, false and (true or not false)) and truefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(11);			//11
+	else
+		printi(1111);		
+	if((truefuncwithparams(4,true, 7 b, false and (true or not false)) or truefuncwithparams(4,true, 7 b, false and (true or not false))) and (truefuncwithparams(4,true, 7 b, false and (true or not false)) and truefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(12);			//12
+	else
+		printi(1212);		
+	if((falsefuncwithparams(4,true, 7 b, false and (true or not false)) or truefuncwithparams(4,true, 7 b, false and (true or not false))) and (falsefuncwithparams(4,true, 7 b, false and (true or not false)) or truefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(13);			//13
+	else
+		printi(1313);		
+	if((falsefuncwithparams(4,true, 7 b, false and (true or not false)) or truefuncwithparams(4,true, 7 b, false and (true or not false))) or (falsefuncwithparams(4,true, 7 b, false and (true or not false)) or falsefuncwithparams(4,true, 7 b, false and (true or not false))))
+		printi(14);			//14
+	else
+		printi(1414);		
+}
+
+
+
+
+
+void ifexpwithtrueandfalsevariables(){
+	bool xoxo = true;
+	bool yoyo = false;
+	if(yoyo){
+		printi(0);
+	}
+	if(yoyo or xoxo)
+		printi(1);			//1
+	else
+		printi(11);
+	if(xoxo or xoxo)
+		printi(2);			//2
+	else
+		printi(22);
+	if(xoxo and xoxo)
+		printi(3);			//3
+	else
+		printi(3);
+	if(xoxo and yoyo)
+		printi(4);
+	else
+		printi(44);			//44		
+	if(xoxo and (xoxo and yoyo))
+		printi(5);
+	else
+		printi(55);			//55
+	if(xoxo and (xoxo and xoxo))
+		printi(6);			//6
+	else
+		printi(66);
+	if(yoyo and (xoxo and xoxo))
+		printi(7);			
+	else
+		printi(77);			//77
+	if(yoyo or (yoyo and xoxo))
+		printi(8);
+	else
+		printi(88);			//88
+	if(yoyo or (yoyo or xoxo))
+		printi(9);			//9
+	else
+		printi(99);
+	if((yoyo and yoyo) and (xoxo and xoxo))
+		printi(10);
+	else
+		printi(1010);		//1010
+	if((xoxo and xoxo) and (xoxo and xoxo))
+		printi(11);			//11
+	else
+		printi(1111);		
+	if((xoxo or xoxo) and (xoxo and xoxo))
+		printi(12);			//12
+	else
+		printi(1212);		
+	if((yoyo or xoxo) and (yoyo or xoxo))
+		printi(13);			//13
+	else
+		printi(1313);		
+	if((yoyo or xoxo) or (yoyo or yoyo))
+		printi(14);			//14
+	else
+		printi(1414);		
+	
+}
+
+
+
+
+
+void ifexpwithtrueandfalseconstants(){
+	if(false){
+		printi(0);
+	}
+	if(false or true)
+		printi(1);			//1
+	else
+		printi(11);
+	if(true or true)
+		printi(2);			//2
+	else
+		printi(22);
+	if(true and true)
+		printi(3);			//3
+	else
+		printi(3);
+	if(true and false)
+		printi(4);
+	else
+		printi(44);			//44		
+	if(true and (true and false))
+		printi(5);
+	else
+		printi(55);			//55
+	if(true and (true and true))
+		printi(6);			//6
+	else
+		printi(66);
+	if(false and (true and true))
+		printi(7);			
+	else
+		printi(77);			//77
+	if(false or (false and true))
+		printi(8);
+	else
+		printi(88);			//88
+	if(false or (false or true))
+		printi(9);			//9
+	else
+		printi(99);
+	if((false and false) and (true and true))
+		printi(10);
+	else
+		printi(1010);		//1010
+	if((true and true) and (true and true))
+		printi(11);			//11
+	else
+		printi(1111);		
+	if((true or true) and (true and true))
+		printi(12);			//12
+	else
+		printi(1212);		
+	if((false or true) and (false or true))
+		printi(13);			//13
+	else
+		printi(1313);		
+	if((false or true) or (false or false))
+		printi(14);			//14
+	else
+		printi(1414);		
+}
+
+
+void whilecheck(){
+	int uuu = 10;
+	while(uuu > 0){
+		printi(uuu + 100);
+		uuu = uuu - 1;
+	}else{
+		printi(900);
+	}
+}
+
+void whilecheckwithbreak(){
+	int nnn = 10;
+	while(nnn > 0){
+		printi(nnn + 200);
+		if(nnn == 5)
+			break;
+		nnn = nnn - 1;
+	}else{
+		printi(900);
+	}
+}
+
+void VariableInitZero(){
+    bool ac;
+	int ax;
+	byte ak;
+	if(ac)
+		print("Error");
+	else
+		printi(0);
+	if(ax == 0)
+		printi(1);
+	else
+		print("Error");
+	if(ak == ax)
+		printi(2);
+	else
+		print("Error");
+	
+}
+
+void Aritmetics(){
+	//overflow
+	byte ba = 250 b;
+	byte bb = 7 b;
+	byte bres = 1 b;
+	byte bout = ba + bb;
+	if(bout != bres)
+		print("Error");
+	int bx = 7;
+	
+	// ops
+	bout = bres - bb;  // -6
+	if(bout == 250 b)
+		printi(3);
+	
+	// comparing int to byte
+	if(bx == bb){
+		printi(4);
+	}
+	
+	// division
+	bx = 14;
+	ba = 14 b;
+	bb = 7 b;
+	int by = 7;
+	if(bx / by != 2)
+		print("Error1");
+	if(ba / bb != 2 b)
+		print("Error2");
+	by = 0;
+	//if(bx / by != 2)
+		//print("Error");					//End test (div by zero)
+	by = 7;
+	if(by * 2 != bx)
+		print("Error4");
+	if(bb * 2 b != 14 b)
+		print("Error");
+	if(100 b * 3 b != 44 b)
+		print("Error5");
+	by = 0 - 10;
+	if(by * by != 100)
+		print("Error6");
+	by = 7;
+	if(bx / by != 2)
+		print("Error7");
+	
+	
+}
+
+bool retbool(){
+	return true;
+}
+
+void boolparams(bool param1, bool param2, bool param3, bool param4){
+	if(param1)
+		print("1");
+	if(param2)
+		print("2");
+	if(param3)
+		print("3");
+	if(param4)
+		print("4");
+}
+
+void complexBool(int count, bool complexVar){
+	if(count == 0) return;
+	if(complexVar){
+		print("true");
+	}else{
+		print("false");
+	}
+	bool eqBool = 4 == 4 or complexVar;
+	bool neqBool = 4 != 4 and complexVar;
+	bool negP1 = not eqBool and not (complexVar);
+	bool negP2 = not neqBool or not (complexVar);
+	complexBool(count - 1 ,eqBool or not(neqBool) and not(negP1 and not negP2));
+}
+
+void booltests(){
+	if(not retbool()){
+		print("Error retbool");
+	}
+	//send bool params
+	boolparams(true, false, true and false, true or false);
+	//1,4
+	boolparams(not true, not false, not (true and false), not (true or false));
+	//2,3
+	bool ca = true;
+	bool cb = false;
+	boolparams(ca, cb, ca and cb, ca or cb);
+	//1,4
+	boolparams(not ca, not cb, not (ca and cb), not (ca or cb));
+	//2,3
+	
+	complexBool(4,false);
+}
+
+int returnTheSameNumber(int zzz){
+	return zzz;
+}
+
+void whilecheckwithbreakwithfuncs(){
+	int jjj = 10;
+	while(returnTheSameNumber(jjj) > 0){
+		printi(returnTheSameNumber(jjj) + 300);
+		if(returnTheSameNumber(jjj) == 5)
+			break;
+		jjj = returnTheSameNumber(jjj) - 1;
+	}else{
+		printi(900);
+	}
+}
+
+void whilecheckwithfuncs(){
+	int uuuu = 10;
+	while(returnTheSameNumber(uuuu) > 0){
+		printi(returnTheSameNumber(uuuu) + 400);
+		uuuu = returnTheSameNumber(uuuu) - 1;
+	}else{
+		printi(900);
+	}
+}
+
+void whilecheckcomplexexprwithfuncs(){
+	int uuuuu = 10;
+	while(returnTheSameNumber(uuuuu) > 0 and truefunc()){
+		printi(returnTheSameNumber(uuuuu) + 500);
+		uuuuu = returnTheSameNumber(uuuuu) - 1;
+	}else{
+		printi(900);
+	}
+}
+
+bool recursiveboolfunc(int counttt){
+	if(counttt == 0)
+		return true;
+	return recursiveboolfunc(counttt - 1);
+}
+
+void whilecheckwithrecursivefunc(){
+	int uuuuuu = 10;
+	while(returnTheSameNumber(uuuuuu) > 0 and recursiveboolfunc(4)){
+		printi(returnTheSameNumber(uuuuuu) + 600);
+		uuuuuu = returnTheSameNumber(uuuuuu) - 1;
+	}else{
+		printi(900);
+	}
+}
+
+byte valPlusOne(byte jgj){
+	return jgj + 1 b;
+}
+
+void retvalfrombytefunccomparewithinttype(){
+	byte saas = 8b;
+	byte sssddddd = 7 b;
+	if(saas != valPlusOne(7 b))
+		printi(28347932);
+	if(8 b != valPlusOne(7 b))
+		printi(2834793123212);
+	if(saas != valPlusOne(sssddddd))
+		printi(28347923132);
+	
+}
+
+void testPhilosophicWhile(){
+	while(true){
+		bool e = true;
+		while(e){
+			e = false;
+		}else{
+			break;
+		}
+	}
+	print("OREN STOP ANNOYING");
+}
+
+void testPhilosophicWhile2(){
+	int count = 8;
+	while(count != 0){
+		bool e = true;
+		while(e){
+			count = count -1;
+			e = false;
+		}else{
+			if(count == 6){
+				continue;
+				count = count + 1;
+			}
+		}
+	}
+	print("EXCEL");
+}
+
+
+void main(){
+	print("VariableInitZero");
+	VariableInitZero();
+	
+	print("Aritmetics");
+	Aritmetics();
+	
+	print("booltests");
+	booltests();
+	
+	print("ifexpswithboolianfuncsnoparams");
+	ifexpswithboolianfuncsnoparams();
+	
+	print("ifexpswithboolianfuncswithparams");
+	ifexpswithboolianfuncswithparams();
+	
+	print("ifexpwithtrueandfalsevariables");
+	ifexpwithtrueandfalsevariables();
+	
+	print("ifexpwithtrueandfalseconstants");
+	ifexpwithtrueandfalseconstants();
+	
+	print("whilecheck");
+	whilecheck();
+	
+	print("whilecheckwithbreak");
+	whilecheckwithbreak();
+	
+	print("whilecheckwithbreakwithfuncs");
+	whilecheckwithbreakwithfuncs();
+	
+	print("whilecheckwithfuncs");
+	whilecheckwithfuncs();
+	
+	print("whilecheckcomplexexprwithfuncs");
+	whilecheckcomplexexprwithfuncs();
+	
+	print("whilecheckwithrecursivefunc");
+	whilecheckwithrecursivefunc();
+	
+	print("retvalfrombytefunccomparewithinttype");
+	retvalfrombytefunccomparewithinttype();
+	
+	print("contCheck");
+	contCheck();
+	
+	print("testPhilosophicWhile");
+	testPhilosophicWhile();
+	
+	print("testPhilosophicWhile2");
+	testPhilosophicWhile2();
+}
+
+// 0 1 2 3 4

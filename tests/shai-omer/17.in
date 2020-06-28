@@ -1,0 +1,13 @@
+// byte overflow
+void main() {
+	byte x = 64b;
+	byte y = 128b;
+	byte z = x * 2b + y;
+	printi(z); // 0
+	y = y + (y - 1b);
+	printi(y); // 255
+	byte w = y + 5b;
+	printi(w); // 4
+	int u = y + 5;
+	printi(u);	// 260
+}

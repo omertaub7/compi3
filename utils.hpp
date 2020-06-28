@@ -231,8 +231,5 @@ void addFunc(Node* retType, Node* ID, Node* Formals);
 void init_global_prog();
 void end_global_prog();
 
-//====================== Buffer printers ============================
-void emitFuncDef(RetType* type, Id* id, Formals* f);
-string to_llvm_retType(TypeN type);
 
 #endif // !_UTILS

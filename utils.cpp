@@ -13,6 +13,12 @@ GlobalSymbolTable* symbolTable;
 CodeBuffer& codeBuffer = CodeBuffer::instance();
 
 //======================= static functions ================
+static string genLabel(string base = "l") {
+	string label = newLabel(base);
+	codeBuffer.emit(label + ":");
+	return label;
+}
+
 static string to_llvm_type(TypeN type) {
 	switch (type)
 	{
@@ -52,9 +58,9 @@ static void evaluateBoolExp(Exp* boolExp, TypeN output_type = TypeN::BOOL) {
 	string assign_label = newLabel();
 	string br_to_assign = "br label %" + assign_label;
 
-	string false_label = codeBuffer.genLabel();
+	string false_label = genLabel();
 	codeBuffer.emit(br_to_assign);
-	string true_label = codeBuffer.genLabel();
+	string true_label = genLabel();
 	codeBuffer.emit(br_to_assign);
 
 	codeBuffer.emit(assign_label + ":");
@@ -207,9 +213,10 @@ string getVarPtr(Id* id) {
 }
 
 string getVarPtr(int offset) {
-	// TODO: what if we want to assign value to one of the arguments?
-	// in c it is allowd...
-	assert(offset >= 0);	// not argument
+	// arguments are saved in the end of the stack
+	if (offset < 0) {
+		offset = 50 + offset;
+	}
 	stringstream get_ptr_code;
 	string ptr = newTemp();
 	get_ptr_code << ptr << " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " << offset;
@@ -321,30 +328,19 @@ Exp* expFromId(Node* pId) {
 	CAST_PTR(Id, id, pId);
 
 	TypeN type = getIdType(id);
-	int offset = symbolTable->getVaribleOffset(id->getName());
 	
 	auto* p = new Exp(type);
 	registerNode(p);
 
-	// in function arguments
-	if (offset < 0) {
-		int arg_number = (offset * -1) - 1;
-		p->place = "%" + to_string(arg_number);
-	}
-	// in stack
-	else {
-		p->place = newTemp();
-		string ptr = getVarPtr(offset);
-		codeBuffer.emit(p->place + " = load i32, i32* " + ptr);
-		// if needs to convert to i1
-		if (type == TypeN::BOOL) {
-			string temp = newTemp();
-			codeBuffer.emit(temp + " = trunc i32 " + p->place + " to i1");
-			p->place = temp;
-		}
-	}
-	// make the true and false list, and branch
+	p->place = newTemp();
+	string ptr = getVarPtr(id);
+	codeBuffer.emit(p->place + " = load i32, i32* " + ptr);
+	// if needs to convert to i1
 	if (type == TypeN::BOOL) {
+		string temp = newTemp();
+		codeBuffer.emit(temp + " = trunc i32 " + p->place + " to i1");
+		p->place = temp;
+		// make the true and false list
 		brOnCond(p->place, p);
 	}
 	
@@ -602,7 +598,6 @@ Call* call(Node* pId) {
 
 //======================  Statement Rules =====================
 Statement* statementList(Node* pNode) {
-	// TODO: implement
 	CAST_PTR(Statements, pStatements, pNode);
 
 	auto* p = new Statement();
@@ -658,12 +653,6 @@ Statement* statementAssign(Node* pNode1, Node* pNode2) {
 	auto* p = new Statement();
 	registerNode(p);
 
-	// check if it is a parameter, if so, then remove it from the parameters list and copy its value to the stack
-	int offset = symbolTable->getVaribleOffset(pId->getName());
-	if (offset < 0) {
-		symbolTable->make_parameter_writeable(pId->getName());
-	}
-
 	storeVarFromExp(pId, pExp);
 	
 	return p;
@@ -681,7 +670,6 @@ Statement* statementCall(Node* pCall) {
 }
 
 Statement* statementReturn() {
-	// TODO: implement
 	if (! (getCurrFuncType() == TypeN::VOID)) {
 		throw errorMismatchException();
 	}
@@ -702,19 +690,17 @@ Statement* statementReturn(Node* pNode) {
 
 	// bool need to do branch trick
 	if (isBool(pExp)) {
-		string true_label = codeBuffer.genLabel();
+		string true_label = genLabel();
 		codeBuffer.emit("ret i1 1");
 
-		string false_label = codeBuffer.genLabel();
+		string false_label = genLabel();
 		codeBuffer.emit("ret i1 0");
 		
 		codeBuffer.bpatch(pExp->falselist, false_label);
 		codeBuffer.bpatch(pExp->truelist, true_label);
 	}
 	else {
-		stringstream code;
-		code << "ret i32 " << pExp->place;
-		codeBuffer.emit(code.str());
+		codeBuffer.emit("ret " + to_llvm_type(getCurrFuncType()) + " " + pExp->place);
 	}
 	
 	return p;
@@ -722,7 +708,6 @@ Statement* statementReturn(Node* pNode) {
 
 Statement* statementIfElse(Node* pExp, Node* pM1, Node* pStatement1, Node* pN1,
 	Node* pM2, Node* pStatement2, Node* pN2) {
-	// TODO: implement
 	CAST_PTR(Exp, exp, pExp);
 	CAST_PTR(M, m1, pM1);
 	CAST_PTR(Statement, statement1, pStatement1);
@@ -767,16 +752,16 @@ else_block_label:
 end_else_label:
 	//Next code statements
 */
-Statement* statementWhileElse(Node* pN1, Node* pM1, Node* pExp, Node* pM2, Node* pStatements1,
-	Node* pN2, Node* pM3, Node* pStatements2, Node* pN3) {
+Statement* statementWhileElse(Node* pN1, Node* pM1, Node* pExp, Node* pM2, Node* pStatement1,
+	Node* pN2, Node* pM3, Node* pStatement2, Node* pN3) {
 	CAST_PTR(N, n1, pN1);
 	CAST_PTR(M, m1, pM1);
 	CAST_PTR(Exp, exp, pExp);
 	CAST_PTR(M, m2, pM2);
-	CAST_PTR(Statement, statements1, pStatements1);
+	CAST_PTR(Statement, s1, pStatement1);
 	CAST_PTR(N, n2, pN2);
 	CAST_PTR(M, m3, pM3);
-	CAST_PTR(Statement, statements2, pStatements2);
+	CAST_PTR(Statement, s2, pStatement2);
 	CAST_PTR(N, n3, pN3);
 
 	if (!isBool(exp)) {
@@ -785,31 +770,43 @@ Statement* statementWhileElse(Node* pN1, Node* pM1, Node* pExp, Node* pM2, Node*
 
 	auto* p = new Statement();
 	registerNode(p);
+	// we need to take care of the guys:
+	// v n1->next, v n2->next, v n3->next, v exp->true, v exp->false,
+	// v s1->next, v s1->break, v s1->continue, v s2->next, v s2->break, v s2->continue 
 
-	string evaluation_label = m1->label; 
-	string while_block_label = m2->label;
-	string else_block_label = m3->label;
-	string end_else_label = codeBuffer.genLabel();
+	string loop_header = m1->label;
+	string loop_body = m2->label;
+	string else_body = m3->label;
 
+	// goes to header
+	// n1->next, n2->next, s1->continue, s1->next
+	codeBuffer.bpatch(n1->nextlist, loop_header);
+	codeBuffer.bpatch(n2->nextlist, loop_header);
+	codeBuffer.bpatch(s1->continueList, loop_header);
+	codeBuffer.bpatch(s1->nextlist, loop_header);
 
-	codeBuffer.bpatch(exp->falselist, else_block_label);
-	codeBuffer.bpatch(exp->truelist, while_block_label);
-	
-	codeBuffer.bpatch(n2->nextlist, evaluation_label);
-	codeBuffer.bpatch(n1->nextlist, evaluation_label);
-	codeBuffer.bpatch(n3->nextlist, end_else_label);
+	// goes to loop body
+	// exp->true
+	codeBuffer.bpatch(exp->truelist, loop_body);
 
-	codeBuffer.bpatch(statements1->breakList, end_else_label);
-	codeBuffer.bpatch(statements1->continueList, evaluation_label);
-	codeBuffer.bpatch(statements1->nextlist, else_block_label);
-	codeBuffer.bpatch(statements2->nextlist, end_else_label);
-	codeBuffer.bpatch(statements2->nextlist, end_else_label);
+	// goes to else body
+	// exp->false
+	codeBuffer.bpatch(exp->falselist, else_body);
+
+	// exits the loop
+	// n3->next, s1->break, s2->next
+	p->nextlist = codeBuffer.merge(n3->nextlist, s1->breakList);
+	p->nextlist = codeBuffer.merge(p->nextlist, s2->nextlist);
+
+	// continue inside else block goes to the the fathers continue
+	p->continueList = s2->continueList;
+	// brake inside the else block goes to the fathers next
+	p->breakList = s2->breakList;
 
 	return p;
 }
 
 Statement* statementIf(Node* pExp, Node* pM, Node* pStatement, Node* pN) {
-	// TODO: implemnet
 	CAST_PTR(Exp, exp, pExp);
 	CAST_PTR(M, m, pM);
 	CAST_PTR(Statement, statement, pStatement);
@@ -846,49 +843,51 @@ Statement* statementWhile(Node* pN, Node* pM1, Node* pExp, Node* pM2, Node* pSta
 	auto* p = new Statement();
 	registerNode(p);
 
-	string label_1 = m1->label; // Exp evaluation
-	string label_2 = m2->label;	// Exp is true - begin of statements
+	string evaluation_label = m1->label;
+	string while_block_label = m2->label;
+	// we nee to take care of:
+	// v n1->next, v n2->next, v s->next, v s->break, v s->continue, v exp->false, v exp->true
 
-	string label_3 = codeBuffer.genLabel(); // End of statements - re-evaluate the expression
-	codeBuffer.emit("br label %" + label_1);
+	// all the guys that go to the loop evaluation -
+	// n1->next, n2->next, s->next, s->continue
+	codeBuffer.bpatch(n1->nextlist, evaluation_label);
+	codeBuffer.bpatch(n2->nextlist, evaluation_label);
+	codeBuffer.bpatch(statement->nextlist, evaluation_label);
+	codeBuffer.bpatch(statement->continueList, evaluation_label);
 
-	string label_4 = codeBuffer.genLabel(); // statements outside of loop
-	codeBuffer.bpatch(n1->nextlist, label_1);
-	codeBuffer.bpatch(n2->nextlist, label_3);
-	// backpatch the truelist of exp to go into the statement
-	codeBuffer.bpatch(exp->falselist, label_4); 
-	codeBuffer.bpatch(exp->truelist, label_2);
-	// backpatch the break statements to end of while loop and continue statements back to bool exp evaluation
-	codeBuffer.bpatch(statement->continueList, label_1);
-	codeBuffer.bpatch(statement->breakList, label_4);
-	codeBuffer.bpatch(statement->nextlist, label_3);
-	
+	// all the guys that go to the loop body
+	// exp->true
+	codeBuffer.bpatch(exp->truelist, while_block_label);
+
+	// all the guys that go out of the loop
+	// s->break, exp->false
+	p->nextlist = codeBuffer.merge(statement->breakList, exp->falselist);
+
 	return p;
 }
 
 Statement* statementBreak() {
-	// TODO: implement
 	if (!inWhile()) {
 		throw errorUnexpectedBreakException();
 	}
 	auto* p = new Statement();
 	int buffer_index = codeBuffer.emit("br label @");
-	BackpatchList breakList = codeBuffer.makelist({buffer_index, FIRST});
-	p->breakList = breakList;
+	p->breakList = codeBuffer.makelist({buffer_index, FIRST});
+
 	registerNode(p);
 	return p;
 }
 
 Statement* statementContinue() {
-	// TODO:
 	if (!inWhile()) {
 		throw errorUnexpectedContinueException();
 	}
-	int buffer_index = codeBuffer.emit("br label @");
-	BackpatchList continueList = codeBuffer.makelist({buffer_index, FIRST});
 	auto* p = new Statement();
 	registerNode(p);
-	p->continueList = continueList;
+
+	int buffer_index = codeBuffer.emit("br label @");
+	p->continueList = codeBuffer.makelist({buffer_index, FIRST});
+
 	return p;
 }
 
@@ -960,7 +959,7 @@ FuncDecl* funcDecl(Node* pNode1, Node* pNode2, Node* pNode3, Node* pNode4) {
 
 	// check if there are any loose edges that need to be backpatched
 	if (statements->nextlist.size() > 0) {
-		string label = codeBuffer.genLabel();
+		string label = genLabel();
 		codeBuffer.bpatch(statements->nextlist, label);
 	}
 	switch (ret_type->getType()) {
@@ -991,7 +990,7 @@ FuncDecl* funcDecl(Node* pNode1, Node* pNode2, Node* pNode3, Node* pNode4) {
 RetType* retType(Node* pNode) {
 	CAST_PTR(Type, pType, pNode);
 
-	auto* p = new RetType((Type*)pType);
+	auto* p = new RetType(pType);
 	registerNode(p);
 	return p;
 }
@@ -1058,7 +1057,7 @@ FormalDecl* formalDecl(Node* pNode1, Node* pNode2) {
 M* m() {
 	auto p = new M();
 	registerNode(p);
-	p->label = codeBuffer.genLabel();
+	p->label = genLabel();
 	return p;
 }
 
@@ -1073,7 +1072,7 @@ N* n() {
 void backpatchStatements(Node* pStatements) {
 	CAST_PTR(Statements, statements, pStatements);
 	if (statements->nextlist.size() > 0) {
-		string label = codeBuffer.genLabel();
+		string label = genLabel();
 		codeBuffer.bpatch(statements->nextlist, label);
 	}
 }
@@ -1111,44 +1110,49 @@ void setReturnType(Node* retType) {
 	symbolTable->setCurrentReturnType(t->getType());
 }
 
-void addFunc(Node* retType, Node* identifier, Node* formals) {
-	CAST_PTR(RetType, t, retType);
-	CAST_PTR(Id, iden, identifier);
-	CAST_PTR(Formals, f, formals);
+void addFunc(Node* retType, Node* identifier, Node* pFormals) {
+	CAST_PTR(RetType, type, retType);
+	CAST_PTR(Id, id, identifier);
+	CAST_PTR(Formals, formals, pFormals);
 
-	symbolTable->insertFunction(t, iden, f);
-	emitFuncDef(t, iden, f);
+	symbolTable->insertFunction(type, id, formals);
+	//print function defenition
+	// define <type> @<name> (<type1>, <type2>, ... ) {
+	// %stack = alloca [50 x i32] 
+	string code = "define " + to_llvm_type(type->getType()) + " @" + id->getName() + " ( ";
+	bool first = true;
+	for (auto p : formals->argTypes) {
+		if (!first) {
+			code += ", ";
+		}
+		first = false;
+		code += to_llvm_type(p.second);
+	}
+	code += " ) {";
+	codeBuffer.emit(code);
+	codeBuffer.emit("%stack = alloca [50 x i32]");
+	// move all parameters to the end of the stack
+	for (auto& p : formals->argTypes) {
+		string arg_name = p.first;
+		TypeN arg_type = p.second;
+		
+		int offset = symbolTable->getVaribleOffset(arg_name);
+		assert(offset < 0); // should be a parameter
+		int arg_number = (offset * -1) - 1;
+		
+		string ptr = getVarPtr(offset);
+		string parameter = "%" + to_string(arg_number);
+		// if bool then we need to extend it	
+		if (arg_type == TypeN::BOOL) {
+			string temp = newTemp();
+			codeBuffer.emit(temp + " = zext i1 " + parameter + " to i32");
+			parameter = temp;
+		}
+		// stores the parameter into the stack
+		codeBuffer.emit("store i32 " + parameter + ", i32* " + ptr);
+	}
 }
 
-void exitFunc(Node* pStatements) {
-	CAST_PTR(Statements, statements, pStatements);
-	
-	if (statements->nextlist.size() > 0) {
-		string label = codeBuffer.genLabel();
-		codeBuffer.bpatch(statements->nextlist, label);
-	}
-	TypeN type = getCurrFuncType();
-	switch (type)
-	{
-	case TypeN::VOID:
-		codeBuffer.emit("ret void");
-		break;
-	case TypeN::BOOL:
-		codeBuffer.emit("ret i1 0");
-		break;
-	case TypeN::INT:
-		codeBuffer.emit("ret i32 0");
-		break;
-	case TypeN::BYTE:
-		codeBuffer.emit("ret i32 0");
-		break;
-	default:
-		assert(false); // sould not get here
-		break;
-	}
-	
-	exitScope();
-}
 
 //====================== LLVM Code handlers ============================
 void init_global_prog() {
@@ -1181,53 +1185,5 @@ void init_global_prog() {
 void end_global_prog() {
 	codeBuffer.printGlobalBuffer();
 	codeBuffer.printCodeBuffer();
-}
-
-//====================== Buffer printers ============================
-string to_llvm_retType(TypeN type) {
-	switch (type) {
-		case TypeN::INT:
-			return "i32 ";
-		case TypeN::BYTE:
-			return "i8 ";
-		case TypeN::VOID:
-			return "void ";
-		case TypeN::BOOL:
-			return "i1 ";
-	}
-}
-
-void emitFuncDef(RetType* type, Id* id, Formals* f) {
-	//print function defenition
-	std::stringstream code;
-	code << "define ";
-	code << to_llvm_retType(type->getType());
-	code << "@";
-	code << id->getName();
-	code << "(";
-	bool first = true;
-	for (auto p : f->argTypes) {
-		if (!first) {
-			code << ", ";
-		}
-		first = false;
-		code << to_llvm_retType(p.second);
-	}
-	code << ") ";
-	code << "{";
-	codeBuffer.emit(code.str());
-	//allocate local stack
-	codeBuffer.emit("%stack = alloca [50 x i32]");
-}
-
-
-string loadValueToReg (string address_reg) {
-	std::stringstream load_statement;
-	string value_reg = newTemp();
-	load_statement << value_reg;
-	load_statement << " = load i32, i32* ";
-	load_statement << address_reg;
-	codeBuffer.emit(load_statement.str());
-	return value_reg;
 }
 	
